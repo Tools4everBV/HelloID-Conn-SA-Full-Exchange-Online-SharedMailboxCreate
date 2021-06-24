@@ -21,7 +21,7 @@ $tmpName = @'
 ExchangeOnlineAdminUsername
 '@ 
 $tmpValue = @'
-svc_helloid@zorgnetonline.nl
+svc_helloid@enyoi.org
 '@ 
 $globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
 
@@ -312,8 +312,16 @@ foreach ($item in $globalHelloIDVariables) {
 <# Begin: HelloID Data sources #>
 <# Begin: DataSource "Shared-mailbox-generate-table-mail-domains-create" #>
 $tmpStaticValue = @'
-[{"Naam":"Stg Dimence Groep","Maildomain":"dimencegroep.nl"},{"Naam":"Stg.De kern stg mdv","Maildomain":"stdekern.nl"},{"Naam":"Stichting Mindfit","Maildomain":"mindfit.nl"},{"Naam":"Stichting Impluz","Maildomain":"impluz.nl"},{"Naam":"Stg. De Wartburg","Maildomain":"stichtingdewartburg.nl"},{"Naam":"Stg.Dimence","Maildomain":"dimence.nl"},{"Naam":"Stichting WijZ","Maildomain":"wijz.nu"},{"Naam":"Stichting Jeugd GGZ","Maildomain":"jeugdggz.com"},{"Naam":"Stg.Welzijn in Kamp","Maildomain":"wijz.nu"},{"Naam":"Stichting Transfore","Maildomain":"transfore.nl"}]
-'@ 
+[
+    {
+        "Naam":  "Enyoi",
+        "Maildomain":  "enyoi.org"
+    },
+    {
+        "Naam":  "Tools4ever",
+        "Maildomain":  "Tools4ever.com"
+    }
+]'@ 
 $tmpModel = @'
 [{"key":"Naam","type":0},{"key":"Maildomain","type":0}]
 '@ 
@@ -391,7 +399,7 @@ Invoke-HelloIDDelegatedForm -DelegatedFormName $delegatedFormName -DynamicFormGu
 <# Begin: Delegated Form Task #>
 if($delegatedFormRef.created -eq $true) { 
 	$tmpScript = @'
-$path = "OU=Shared,OU=Mailbox Permissies,OU=Groepen,OU=Zorgnet,DC=zorgnet,DC=local"
+$path = "OU=Shared,OU=Mailbox Permissies,OU=Groepen,OU=enyoi,DC=org"
 
 # Fixed values
 $AutoMapping = $false
