@@ -1,0 +1,54 @@
+[
+    {
+        "key":  "organization",
+        "templateOptions":  {
+                                "label":  "Organization",
+                                "required":  true,
+                                "useObjects":  false,
+                                "useDataSource":  true,
+                                "useFilter":  true,
+                                "options":  [
+
+                                            ],
+                                "valueField":  "Maildomain",
+                                "textField":  "Naam",
+                                "dataSourceConfig":  {
+                                                         "dataSourceGuid":  "$dataSourceGuid_0",
+                                                         "input":  {
+                                                                       "propertyInputs":  [
+
+                                                                                          ]
+                                                                   }
+                                                     }
+                            },
+        "type":  "dropdown",
+        "summaryVisibility":  "Show",
+        "textOrLabel":  "text",
+        "requiresTemplateOptions":  true,
+        "requiresKey":  true
+    },
+    {
+        "key":  "name",
+        "templateOptions":  {
+                                "label":  "name",
+                                "placeholder":  "IT department",
+                                "required":  true,
+                                "minLength":  2
+                            },
+        "type":  "input",
+        "summaryVisibility":  "Show",
+        "requiresTemplateOptions":  true,
+        "requiresKey":  true
+    },
+    {
+        "key":  "alias",
+        "templateOptions":  {
+                                "label":  "Alias",
+                                "placeholder":  "it-department"
+                            },
+        "type":  "input",
+        "summaryVisibility":  "Show",
+        "requiresTemplateOptions":  true,
+        "requiresKey":  true
+    }
+]
