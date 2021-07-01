@@ -1,3 +1,7 @@
+<!-- Requirements -->
+## Requirements
+This HelloID Service Automation Delegated Form uses the [Exchange Online PowerShell V2 module](https://docs.microsoft.com/en-us/powershell/exchange/exchange-online-powershell-v2?view=exchange-ps)
+
 <!-- Description -->
 ## Description
 This HelloID Service Automation Delegated Form provides Exchange Online (Office365) Shared mailbox functionality. The following steps will be performed:
