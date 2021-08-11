@@ -321,7 +321,8 @@ $tmpStaticValue = @'
         "Naam":  "Tools4ever",
         "Maildomain":  "Tools4ever.com"
     }
-]'@ 
+]
+'@ 
 $tmpModel = @'
 [{"key":"Naam","type":0},{"key":"Maildomain","type":0}]
 '@ 
