@@ -6,7 +6,7 @@
 $portalUrl = "https://CUSTOMER.helloid.com"
 $apiKey = "API_KEY"
 $apiSecret = "API_SECRET"
-$delegatedFormAccessGroupNames = @("Users","HID_administrators") #Only unique names are supported. Groups must exist!
+$delegatedFormAccessGroupNames = @("Users") #Only unique names are supported. Groups must exist!
 $delegatedFormCategories = @("Office 365","mailbox Management") #Only unique names are supported. Categories will be created if not exists
 $script:debugLogging = $false #Default value: $false. If $true, the HelloID resource GUIDs will be shown in the logging
 $script:duplicateForm = $false #Default value: $false. If $true, the HelloID resource names will be changed to import a duplicate Form
@@ -16,7 +16,14 @@ $script:duplicateFormSuffix = "_tmp" #the suffix will be added to all HelloID re
 #NOTE: You can also update the HelloID Global variable values afterwards in the HelloID Admin Portal: https://<CUSTOMER>.helloid.com/admin/variablelibrary
 $globalHelloIDVariables = [System.Collections.Generic.List[object]]@();
 
-#Global variable #1 >> ExchangeOnlineAdminUsername
+#Global variable #1 >> ExchangeOnlineAdminPassword
+$tmpName = @'
+ExchangeOnlineAdminPassword
+'@ 
+$tmpValue = "" 
+$globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "True"});
+
+#Global variable #2 >> ExchangeOnlineAdminUsername
 $tmpName = @'
 ExchangeOnlineAdminUsername
 '@ 
@@ -24,13 +31,6 @@ $tmpValue = @'
 svc_helloid@enyoi.org
 '@ 
 $globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
-
-#Global variable #2 >> ExchangeOnlineAdminPassword
-$tmpName = @'
-ExchangeOnlineAdminPassword
-'@ 
-$tmpValue = "" 
-$globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "True"});
 
 
 #make sure write-information logging is visual
@@ -61,7 +61,18 @@ if (-not [string]::IsNullOrEmpty($portalBaseUrl)) {
 
 # Define specific endpoint URI
 $script:PortalBaseUrl = $script:PortalBaseUrl.trim("/") + "/"  
- 
+
+# Make sure to reveive an empty array using PowerShell Core
+function ConvertFrom-Json-WithEmptyArray([string]$jsonString) {
+    # Running in PowerShell Core?
+    if($IsCoreCLR -eq $true){
+        $r = [Object[]]($jsonString | ConvertFrom-Json -NoEnumerate)
+        return ,$r  # Force return value to be an array using a comma
+    } else {
+        $r = [Object[]]($jsonString | ConvertFrom-Json)
+        return ,$r  # Force return value to be an array using a comma
+    }
+}
 
 function Invoke-HelloIDGlobalVariable {
     param(
@@ -128,7 +139,7 @@ function Invoke-HelloIDAutomationTask {
                 powerShellScript    = $PowershellScript;
                 automationContainer = $AutomationContainer;
                 objectGuid          = $ObjectGuid;
-                variables           = [Object[]]($Variables | ConvertFrom-Json);
+                variables           = (ConvertFrom-Json-WithEmptyArray($Variables));
             }
             $body = ConvertTo-Json -InputObject $body
     
@@ -179,11 +190,11 @@ function Invoke-HelloIDDatasource {
             $body = @{
                 name               = $DatasourceName;
                 type               = $DatasourceType;
-                model              = [Object[]]($DatasourceModel | ConvertFrom-Json);
+                model              = (ConvertFrom-Json-WithEmptyArray($DatasourceModel));
                 automationTaskGUID = $AutomationTaskGuid;
-                value              = [Object[]]($DatasourceStaticValue | ConvertFrom-Json);
+                value              = (ConvertFrom-Json-WithEmptyArray($DatasourceStaticValue));
                 script             = $DatasourcePsScript;
-                input              = [Object[]]($DatasourceInput | ConvertFrom-Json);
+                input              = (ConvertFrom-Json-WithEmptyArray($DatasourceInput));
             }
             $body = ConvertTo-Json -InputObject $body
       
@@ -225,7 +236,7 @@ function Invoke-HelloIDDynamicForm {
             #Create Dynamic form
             $body = @{
                 Name       = $FormName;
-                FormSchema = [Object[]]($FormSchema | ConvertFrom-Json)
+                FormSchema = (ConvertFrom-Json-WithEmptyArray($FormSchema));
             }
             $body = ConvertTo-Json -InputObject $body -Depth 100
     
@@ -273,7 +284,7 @@ function Invoke-HelloIDDelegatedForm {
                 name            = $DelegatedFormName;
                 dynamicFormGUID = $DynamicFormGuid;
                 isEnabled       = "True";
-                accessGroups    = [Object[]]($AccessGroups | ConvertFrom-Json);
+                accessGroups    = (ConvertFrom-Json-WithEmptyArray($AccessGroups));
                 useFaIcon       = $UseFaIcon;
                 faIcon          = $FaIcon;
             }    
@@ -312,16 +323,7 @@ foreach ($item in $globalHelloIDVariables) {
 <# Begin: HelloID Data sources #>
 <# Begin: DataSource "Shared-mailbox-generate-table-mail-domains-create" #>
 $tmpStaticValue = @'
-[
-    {
-        "Naam":  "Enyoi",
-        "Maildomain":  "enyoi.org"
-    },
-    {
-        "Naam":  "Tools4ever",
-        "Maildomain":  "Tools4ever.com"
-    }
-]
+[{"Naam":"Enyoi","Maildomain":"enyoi.org"},{"Naam":"Tools4ever","Maildomain":"Tools4ever.com"}]
 '@ 
 $tmpModel = @'
 [{"key":"Naam","type":0},{"key":"Maildomain","type":0}]
@@ -511,7 +513,7 @@ try{
 '@; 
 
 	$tmpVariables = @'
-[{"name":"Alias","value":"{{form.alias}}","secret":false,"typeConstraint":"string"},{"name":"Name","value":"{{form.name}}","secret":false,"typeConstraint":"string"},{"name":"Maildomain","value":"{{form.organization.Maildomain}}","secret":false,"typeConstraint":"string"}]
+[{"name":"Alias","value":"{{form.alias}}","secret":false,"typeConstraint":"string"},{"name":"Maildomain","value":"{{form.organization.Maildomain}}","secret":false,"typeConstraint":"string"},{"name":"Name","value":"{{form.name}}","secret":false,"typeConstraint":"string"}]
 '@ 
 
 	$delegatedFormTaskGuid = [PSCustomObject]@{} 

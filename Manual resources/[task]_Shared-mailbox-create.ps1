@@ -1,4 +1,4 @@
-$path = "OU=Shared,OU=Mailbox Permissies,OU=Groepen,OU=Zorgnet,DC=zorgnet,DC=local"
+$path = "OU=Shared,OU=Mailbox Permissies,OU=Groepen,OU=enyoi,DC=org"
 
 # Fixed values
 $AutoMapping = $false

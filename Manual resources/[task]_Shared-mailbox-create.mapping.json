@@ -4,11 +4,11 @@
         "value":  "{{form.alias}}"
     },
     {
-        "name":  "Name",
-        "value":  "{{form.name}}"
-    },
-    {
         "name":  "Maildomain",
         "value":  "{{form.organization.Maildomain}}"
+    },
+    {
+        "name":  "Name",
+        "value":  "{{form.name}}"
     }
 ]

@@ -9,7 +9,13 @@ This HelloID Service Automation Delegated Form provides Exchange Online (Office3
  2. Create the shared mailbox
  3. A corresponding AD group is created 
  4. The AD group is granted Full Access and Send As permissions on the mailbox
- 
+
+## Versioning
+| Version | Description | Date |
+| - | - | - |
+| 1.0.1   | Added version number and updated all-in-one script | 2021/11/16  |
+| 1.0.0   | Initial release | 2021/04/29  |
+
 <!-- TABLE OF CONTENTS -->
 ## Table of Contents
 * [Description](#description)
@@ -47,5 +53,8 @@ This Static data source the domain name for the mail address of the mailbox.
 ### Delegated form task 'Shared-mailbox-create'
 This delegated form task will create the shared mailbox in Exchange.
 
-# HelloID Docs
+## Getting help
+_If you need help, feel free to ask questions on our [forum](https://forum.helloid.com/forum/helloid-connectors/service-automation/95-helloid-sa-exchange-online-create-shared-mailbox)_
+
+## HelloID Docs
 The official HelloID documentation can be found at: https://docs.helloid.com/
