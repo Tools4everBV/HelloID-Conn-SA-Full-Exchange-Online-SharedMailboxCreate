@@ -10,7 +10,7 @@ try{
     $module = Import-Module ExchangeOnlineManagement
 
     $securePassword = ConvertTo-SecureString $ExchangeOnlineAdminPassword -AsPlainText -Force
-    $credential = New-Object System.Management.Automation.PSCredential ($ExchangeOnlineAdminUsername, $securePassword)
+    $credential = [System.Management.Automation.PSCredential]::new($ExchangeOnlineAdminUsername,$securePassword)
 
     $exchangeSession = Connect-ExchangeOnline -Credential $credential -ShowBanner:$false -ShowProgress:$false -TrackPerformance:$false -ErrorAction Stop 
 
