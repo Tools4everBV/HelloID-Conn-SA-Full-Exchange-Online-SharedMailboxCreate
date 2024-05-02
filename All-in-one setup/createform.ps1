@@ -6,8 +6,8 @@
 $portalUrl = "https://CUSTOMER.helloid.com"
 $apiKey = "API_KEY"
 $apiSecret = "API_SECRET"
-$delegatedFormAccessGroupNames = @("Users") #Only unique names are supported. Groups must exist!
-$delegatedFormCategories = @("Office 365","mailbox Management") #Only unique names are supported. Categories will be created if not exists
+$delegatedFormAccessGroupNames = @("") #Only unique names are supported. Groups must exist!
+$delegatedFormCategories = @("mailbox Management","Office 365") #Only unique names are supported. Categories will be created if not exists
 $script:debugLogging = $false #Default value: $false. If $true, the HelloID resource GUIDs will be shown in the logging
 $script:duplicateForm = $false #Default value: $false. If $true, the HelloID resource names will be changed to import a duplicate Form
 $script:duplicateFormSuffix = "_tmp" #the suffix will be added to all HelloID resource names to generate a duplicate form with different resource names
@@ -16,19 +16,33 @@ $script:duplicateFormSuffix = "_tmp" #the suffix will be added to all HelloID re
 #NOTE: You can also update the HelloID Global variable values afterwards in the HelloID Admin Portal: https://<CUSTOMER>.helloid.com/admin/variablelibrary
 $globalHelloIDVariables = [System.Collections.Generic.List[object]]@();
 
-#Global variable #1 >> ExchangeOnlineAdminPassword
+#Global variable #1 >> EntraSecret
 $tmpName = @'
-ExchangeOnlineAdminPassword
+EntraSecret
 '@ 
 $tmpValue = "" 
 $globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "True"});
 
-#Global variable #2 >> ExchangeOnlineAdminUsername
+#Global variable #2 >> EntraTenantId
 $tmpName = @'
-ExchangeOnlineAdminUsername
+EntraTenantId
+'@ 
+$tmpValue = "" 
+$globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
+
+#Global variable #3 >> EntraAppID
+$tmpName = @'
+EntraAppID
+'@ 
+$tmpValue = "" 
+$globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
+
+#Global variable #4 >> EntraOrganization
+$tmpName = @'
+EntraOrganization
 '@ 
 $tmpValue = @'
-svc_helloid@enyoi.org
+domain.onmicrosoft.com
 '@ 
 $globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
 
@@ -95,7 +109,7 @@ function Invoke-HelloIDGlobalVariable {
                 secret   = $Secret;
                 ItemType = 0;
             }    
-            $body = ConvertTo-Json -InputObject $body
+            $body = ConvertTo-Json -InputObject $body -Depth 100
     
             $uri = ($script:PortalBaseUrl + "api/v1/automation/variable")
             $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false -Body $body
@@ -141,7 +155,7 @@ function Invoke-HelloIDAutomationTask {
                 objectGuid          = $ObjectGuid;
                 variables           = (ConvertFrom-Json-WithEmptyArray($Variables));
             }
-            $body = ConvertTo-Json -InputObject $body
+            $body = ConvertTo-Json -InputObject $body -Depth 100
     
             $uri = ($script:PortalBaseUrl +"api/v1/automationtasks/powershell")
             $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false -Body $body
@@ -196,7 +210,7 @@ function Invoke-HelloIDDatasource {
                 script             = $DatasourcePsScript;
                 input              = (ConvertFrom-Json-WithEmptyArray($DatasourceInput));
             }
-            $body = ConvertTo-Json -InputObject $body
+            $body = ConvertTo-Json -InputObject $body -Depth 100
       
             $uri = ($script:PortalBaseUrl +"api/v1/datasource")
             $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false -Body $body
@@ -261,10 +275,11 @@ function Invoke-HelloIDDelegatedForm {
     param(
         [parameter(Mandatory)][String]$DelegatedFormName,
         [parameter(Mandatory)][String]$DynamicFormGuid,
-        [parameter()][String][AllowEmptyString()]$AccessGroups,
+        [parameter()][Array][AllowEmptyString()]$AccessGroups,
         [parameter()][String][AllowEmptyString()]$Categories,
         [parameter(Mandatory)][String]$UseFaIcon,
         [parameter()][String][AllowEmptyString()]$FaIcon,
+        [parameter()][String][AllowEmptyString()]$task,
         [parameter(Mandatory)][Ref]$returnObject
     )
     $delegatedFormCreated = $false
@@ -284,11 +299,16 @@ function Invoke-HelloIDDelegatedForm {
                 name            = $DelegatedFormName;
                 dynamicFormGUID = $DynamicFormGuid;
                 isEnabled       = "True";
-                accessGroups    = (ConvertFrom-Json-WithEmptyArray($AccessGroups));
                 useFaIcon       = $UseFaIcon;
                 faIcon          = $FaIcon;
-            }    
-            $body = ConvertTo-Json -InputObject $body
+                task            = ConvertFrom-Json -inputObject $task;
+            }
+            if(-not[String]::IsNullOrEmpty($AccessGroups)) { 
+                $body += @{
+                    accessGroups    = (ConvertFrom-Json-WithEmptyArray($AccessGroups));
+                }
+            }
+            $body = ConvertTo-Json -InputObject $body -Depth 100
     
             $uri = ($script:PortalBaseUrl +"api/v1/delegatedforms")
             $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false -Body $body
@@ -313,6 +333,8 @@ function Invoke-HelloIDDelegatedForm {
     $returnObject.value.guid = $delegatedFormGuid
     $returnObject.value.created = $delegatedFormCreated
 }
+
+
 <# Begin: HelloID Global Variables #>
 foreach ($item in $globalHelloIDVariables) {
 	Invoke-HelloIDGlobalVariable -Name $item.name -Value $item.value -Secret $item.secret 
@@ -321,7 +343,7 @@ foreach ($item in $globalHelloIDVariables) {
 
 
 <# Begin: HelloID Data sources #>
-<# Begin: DataSource "Shared-mailbox-generate-table-mail-domains-create" #>
+<# Begin: DataSource "Exchange-online-shared-mailbox-generate-table-mail-domains-create" #>
 $tmpStaticValue = @'
 [{"Naam":"Enyoi","Maildomain":"enyoi.org"},{"Naam":"Tools4ever","Maildomain":"Tools4ever.com"}]
 '@ 
@@ -330,45 +352,205 @@ $tmpModel = @'
 '@ 
 $dataSourceGuid_0 = [PSCustomObject]@{} 
 $dataSourceGuid_0_Name = @'
-Shared-mailbox-generate-table-mail-domains-create
+Exchange-online-shared-mailbox-generate-table-mail-domains-create
 '@ 
 Invoke-HelloIDDatasource -DatasourceName $dataSourceGuid_0_Name -DatasourceType "2" -DatasourceStaticValue $tmpStaticValue -DatasourceModel $tmpModel -returnObject ([Ref]$dataSourceGuid_0) 
-<# End: DataSource "Shared-mailbox-generate-table-mail-domains-create" #>
+<# End: DataSource "Exchange-online-shared-mailbox-generate-table-mail-domains-create" #>
+
+<# Begin: DataSource "function-check-online-mailbox-exists" #>
+$tmpPsScript = @'
+#######################################################################
+# Template: RHo HelloID SA Powershell data source
+# Name: function-check-online-mailbox-exists
+# Date: 05-02-2024
+#######################################################################
+
+# For basic information about powershell data sources see:
+# https://docs.helloid.com/en/service-automation/dynamic-forms/data-sources/powershell-data-sources.html
+
+# Service automation variables:
+# https://docs.helloid.com/en/service-automation/service-automation-variables.html
+
+#region init
+# Set TLS to accept TLS, TLS 1.1 and TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
+
+$VerbosePreference = "SilentlyContinue"
+$InformationPreference = "Continue"
+$WarningPreference = "Continue"
+
+# global variables (Automation --> Variable libary):
+$TenantId = $EntraTenantId
+$AppID = $EntraAppID
+$Secret = $EntraSecret
+$Organization = $EntraOrganization
+
+# variables configured in form:
+$Maildomain = $datasource.Organization.Maildomain
+$Name = $datasource.name
+$Alias = $datasource.alias
+$PrimarySmtpAddress = $Alias.Replace(" ", "") + "@$Maildomain"
+
+# PowerShell commands to import
+$commands = @("Get-User", "Get-Mailbox")
+#endregion init
+
+try {
+    #region import module
+    $actionMessage = "importing $moduleName module"
+
+    $importModuleParams = @{
+        Name        = "ExchangeOnlineManagement"
+        Cmdlet      = $commands
+        ErrorAction = 'Stop'
+    }
+
+    Import-Module @importModuleParams
+    #endregion import module
+
+    #region create access token
+    Write-Verbose "Creating Access Token"
+    $actionMessage = "creating access token"
+        
+    $body = @{
+        grant_type    = "client_credentials"
+        client_id     = "$AppID"
+        client_secret = "$Secret"
+        resource      = "https://outlook.office365.com"
+    }
+
+    $exchangeAccessTokenParams = @{
+        Method          = 'POST'
+        Uri             = "https://login.microsoftonline.com/$TenantId/oauth2/token"
+        Body            = $body
+        ContentType     = 'application/x-www-form-urlencoded'
+        UseBasicParsing = $true
+    }
+        
+    $accessToken = (Invoke-RestMethod @exchangeAccessTokenParams).access_token
+    #endregion create access token
+
+    #region connect to Exchange Online
+    Write-Verbose "Connecting to Exchange Online"
+    $actionMessage = "connecting to Exchange Online"
+
+    $exchangeSessionParams = @{
+        Organization     = $Organization
+        AppID            = $AppID
+        AccessToken      = $accessToken
+        CommandName      = $commands
+        ShowBanner       = $false
+        ShowProgress     = $false
+        TrackPerformance = $false
+        ErrorAction      = 'Stop'
+    }
+    Connect-ExchangeOnline @exchangeSessionParams
+        
+    Write-Information "Successfully connected to Exchange Online"
+    #endregion connect to Exchange Online
+
+    #region check shared mailbox
+    $actionMessage = "getting shared mailbox"
+
+    $SharedMailboxParams = @{
+        Filter               = "{Alias -eq '$Alias' -or Name -eq '$Name' -or PrimarySmtpAddress -eq '$PrimarySmtpAddress'}"
+        # RecipientTypeDetails = 'SharedMailbox'
+        ErrorAction          = 'Stop'        
+    }
+    
+    $SharedMailbox = Get-Mailbox @SharedMailboxParams
+   
+    if ([string]::IsNullOrEmpty($SharedMailbox)) {
+        Write-Information  "Shared Mailbox name [$Name] is available"
+        $outputMessage = "Valid | Shared Mailbox name [$Name] is available"
+        $returnObject = @{
+            text = $outputMessage
+        }     
+    }
+    else {
+        Write-Information  "Shared Mailbox [$Name] exists. Please try another name" 
+        $outputMessage = "Invalid | Shared Mailbox name [$Name] exists. Please try another name"
+        $returnObject = @{
+            text = $outputMessage
+        }
+    }
+    #endregion check shared mailbox           
+}
+catch {
+    $ex = $PSItem
+    if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+        $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorMessage = ($ex.ErrorDetails.Message | Convertfrom-json).error_description
+    }
+    else {
+        $errorMessage = $($ex.Exception.message)
+    }
+
+    Write-Error "Error $actionMessage for Exchange Online shared mailbox [$Name]. Error: $errorMessage"
+    
+    $outputMessage = "Invalid | Error $actionMessage for Exchange Online shared mailbox [$Name]. Error: $errorMessage"
+    $returnObject = @{
+        text = $outputMessage
+    }
+}
+finally {
+    Write-Output $returnObject 
+}
+#endregion lookup
+'@ 
+$tmpModel = @'
+[{"key":"text","type":0}]
+'@ 
+$tmpInput = @'
+[{"description":null,"translateDescription":false,"inputFieldType":1,"key":"Name","type":0,"options":1},{"description":null,"translateDescription":false,"inputFieldType":1,"key":"Alias","type":0,"options":1},{"description":null,"translateDescription":false,"inputFieldType":1,"key":"Organization","type":0,"options":1}]
+'@ 
+$dataSourceGuid_1 = [PSCustomObject]@{} 
+$dataSourceGuid_1_Name = @'
+function-check-online-mailbox-exists
+'@ 
+Invoke-HelloIDDatasource -DatasourceName $dataSourceGuid_1_Name -DatasourceType "4" -DatasourceInput $tmpInput -DatasourcePsScript $tmpPsScript -DatasourceModel $tmpModel -returnObject ([Ref]$dataSourceGuid_1) 
+<# End: DataSource "function-check-online-mailbox-exists" #>
 <# End: HelloID Data sources #>
 
-<# Begin: Dynamic Form "Shared Mailbox - Create" #>
+<# Begin: Dynamic Form "Exchange Online Shared Mailbox - Create" #>
 $tmpSchema = @"
-[{"key":"organization","templateOptions":{"label":"Organization","required":true,"useObjects":false,"useDataSource":true,"useFilter":true,"options":[],"valueField":"Maildomain","textField":"Naam","dataSourceConfig":{"dataSourceGuid":"$dataSourceGuid_0","input":{"propertyInputs":[]}}},"type":"dropdown","summaryVisibility":"Show","textOrLabel":"text","requiresTemplateOptions":true,"requiresKey":true},{"key":"name","templateOptions":{"label":"name","placeholder":"IT department","required":true,"minLength":2},"type":"input","summaryVisibility":"Show","requiresTemplateOptions":true,"requiresKey":true},{"key":"alias","templateOptions":{"label":"Alias","placeholder":"it-department"},"type":"input","summaryVisibility":"Show","requiresTemplateOptions":true,"requiresKey":true}]
+[{"templateOptions":{"title":"Retrieving this information from Exchange Online takes an average of +/- 10 seconds.","titleField":"","bannerType":"Info","useBody":true},"type":"textbanner","summaryVisibility":"Show","body":"Please wait so we can validate the input.","requiresTemplateOptions":false,"requiresKey":false,"requiresDataSource":false},{"key":"organization","templateOptions":{"label":"Organization","required":true,"useObjects":false,"useDataSource":true,"useFilter":true,"options":[],"valueField":"Naam","textField":"Naam","dataSourceConfig":{"dataSourceGuid":"$dataSourceGuid_0","input":{"propertyInputs":[]}},"useDefault":true,"defaultSelectorProperty":"Naam"},"type":"dropdown","summaryVisibility":"Show","textOrLabel":"text","requiresTemplateOptions":true,"requiresKey":true,"requiresDataSource":false},{"key":"name","templateOptions":{"label":"name","placeholder":"IT department","required":true,"minLength":2},"type":"input","summaryVisibility":"Show","requiresTemplateOptions":true,"requiresKey":true,"requiresDataSource":false},{"key":"alias","templateOptions":{"label":"Alias","placeholder":"it-department"},"type":"input","summaryVisibility":"Show","requiresTemplateOptions":true,"requiresKey":true,"requiresDataSource":false},{"key":"Validation","templateOptions":{"label":"Validate","readonly":true,"useDataSource":true,"pattern":"^Valid.*","dataSourceConfig":{"dataSourceGuid":"$dataSourceGuid_1","input":{"propertyInputs":[{"propertyName":"Name","otherFieldValue":{"otherFieldKey":"name"}},{"propertyName":"Alias","otherFieldValue":{"otherFieldKey":"alias"}},{"propertyName":"Organization","otherFieldValue":{"otherFieldKey":"organization"}}]}},"displayField":"text","required":true},"type":"input","summaryVisibility":"Show","requiresTemplateOptions":true,"requiresKey":true,"requiresDataSource":false}]
 "@ 
 
 $dynamicFormGuid = [PSCustomObject]@{} 
 $dynamicFormName = @'
-Shared Mailbox - Create
+Exchange Online Shared Mailbox - Create
 '@ 
 Invoke-HelloIDDynamicForm -FormName $dynamicFormName -FormSchema $tmpSchema  -returnObject ([Ref]$dynamicFormGuid) 
 <# END: Dynamic Form #>
 
 <# Begin: Delegated Form Access Groups and Categories #>
 $delegatedFormAccessGroupGuids = @()
-foreach($group in $delegatedFormAccessGroupNames) {
-    try {
-        $uri = ($script:PortalBaseUrl +"api/v1/groups/$group")
-        $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false
-        $delegatedFormAccessGroupGuid = $response.groupGuid
-        $delegatedFormAccessGroupGuids += $delegatedFormAccessGroupGuid
-        
-        Write-Information "HelloID (access)group '$group' successfully found$(if ($script:debugLogging -eq $true) { ": " + $delegatedFormAccessGroupGuid })"
-    } catch {
-        Write-Error "HelloID (access)group '$group', message: $_"
+if(-not[String]::IsNullOrEmpty($delegatedFormAccessGroupNames)){
+    foreach($group in $delegatedFormAccessGroupNames) {
+        try {
+            $uri = ($script:PortalBaseUrl +"api/v1/groups/$group")
+            $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false
+            $delegatedFormAccessGroupGuid = $response.groupGuid
+            $delegatedFormAccessGroupGuids += $delegatedFormAccessGroupGuid
+            
+            Write-Information "HelloID (access)group '$group' successfully found$(if ($script:debugLogging -eq $true) { ": " + $delegatedFormAccessGroupGuid })"
+        } catch {
+            Write-Error "HelloID (access)group '$group', message: $_"
+        }
+    }
+    if($null -ne $delegatedFormAccessGroupGuids){
+        $delegatedFormAccessGroupGuids = ($delegatedFormAccessGroupGuids | Select-Object -Unique | ConvertTo-Json -Depth 100 -Compress)
     }
 }
-$delegatedFormAccessGroupGuids = ($delegatedFormAccessGroupGuids | Select-Object -Unique | ConvertTo-Json -Compress)
 
 $delegatedFormCategoryGuids = @()
 foreach($category in $delegatedFormCategories) {
     try {
         $uri = ($script:PortalBaseUrl +"api/v1/delegatedformcategories/$category")
         $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false
+        $response = $response | Where-Object {$_.name.en -eq $category}
+        
         $tmpGuid = $response.delegatedFormCategoryGuid
         $delegatedFormCategoryGuids += $tmpGuid
         
@@ -378,7 +560,7 @@ foreach($category in $delegatedFormCategories) {
         $body = @{
             name = @{"en" = $category};
         }
-        $body = ConvertTo-Json -InputObject $body
+        $body = ConvertTo-Json -InputObject $body -Depth 100
 
         $uri = ($script:PortalBaseUrl +"api/v1/delegatedformcategories")
         $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false -Body $body
@@ -388,140 +570,18 @@ foreach($category in $delegatedFormCategories) {
         Write-Information "HelloID Delegated Form category '$category' successfully created$(if ($script:debugLogging -eq $true) { ": " + $tmpGuid })"
     }
 }
-$delegatedFormCategoryGuids = (ConvertTo-Json -InputObject $delegatedFormCategoryGuids -Compress)
+$delegatedFormCategoryGuids = (ConvertTo-Json -InputObject $delegatedFormCategoryGuids -Depth 100 -Compress)
 <# End: Delegated Form Access Groups and Categories #>
 
 <# Begin: Delegated Form #>
 $delegatedFormRef = [PSCustomObject]@{guid = $null; created = $null} 
 $delegatedFormName = @'
-Shared Mailbox - Create
+Exchange Online - Shared Mailbox - Create
 '@
-Invoke-HelloIDDelegatedForm -DelegatedFormName $delegatedFormName -DynamicFormGuid $dynamicFormGuid -AccessGroups $delegatedFormAccessGroupGuids -Categories $delegatedFormCategoryGuids -UseFaIcon "True" -FaIcon "fa fa-inbox" -returnObject ([Ref]$delegatedFormRef) 
-<# End: Delegated Form #>
-
-<# Begin: Delegated Form Task #>
-if($delegatedFormRef.created -eq $true) { 
-	$tmpScript = @'
-$path = "OU=Shared,OU=Mailbox Permissies,OU=Groepen,OU=enyoi,DC=org"
-
-# Fixed values
-$AutoMapping = $false
-
-# Connect to Office 365
-try{
-    Hid-Write-Status -Event Information -Message "Connecting to Office 365.."
-
-    $module = Import-Module ExchangeOnlineManagement
-
-    $securePassword = ConvertTo-SecureString $ExchangeOnlineAdminPassword -AsPlainText -Force
-    $credential = [System.Management.Automation.PSCredential]::new($ExchangeOnlineAdminUsername,$securePassword)
-
-    $exchangeSession = Connect-ExchangeOnline -Credential $credential -ShowBanner:$false -ShowProgress:$false -TrackPerformance:$false -ErrorAction Stop 
-
-    Hid-Write-Status -Event Success -Message "Successfully connected to Office 365"
-}catch{
-    throw "Could not connect to Exchange Online, error: $_"
-}
-
-try{
-    # Create Shared mailbox
-    try{
-        $SharedMailboxParams = @{
-            Name                =   $Name
-            DisplayName         =   $Name
-            PrimarySmtpAddress  =   $Alias.Replace(" ","") + "@$Maildomain"
-            Alias               =   $Alias.Replace(" ","")
-        }
-
-        $SharedMailbox = New-Mailbox -Shared @SharedMailboxParams -ErrorAction Stop
-     
-        Hid-Write-Status -Message "Shared Mailbox [$($SharedMailboxParams.Name)] created successfully" -Event Success
-        HID-Write-Summary -Message "Shared Mailbox [$($SharedMailboxParams.Name)] created successfully" -Event Success
-    } catch {
-        HID-Write-Status -Message "Error creating Shared Mailbox [$($SharedMailboxParams.Name)]. Error: $($_)" -Event Error
-        HID-Write-Summary -Message "Error creating Shared Mailbox [$($SharedMailboxParams.Name)]" -Event Failed
-    }
-
-    # Create AD Group
-    try{   
-        $groupParams = @{
-            Name            = "MBX_" + $Name.Replace(' ','_')
-            GroupScope      = "Universal"
-            Path            = $path
-        }
- 
-        $primarySmtpAddress = $groupParams.name.Replace(" ","") + "@$Maildomain"
-        $adGroup = New-ADGroup @groupParams -OtherAttributes @{'mail'=$primarySmtpAddress} -ErrorAction Stop
-
-        Hid-Write-Status -Message "AD Group [$($groupParams.Name)] created successfully" -Event Success
-        HID-Write-Summary -Message "AD Group [$($groupParams.Name)] created successfully" -Event Success
-    } catch {
-        HID-Write-Status -Message "Error creating AD Group [$($groupParams.Name)]. Error: $($_)" -Event Error
-        HID-Write-Summary -Message "Error creating AD Group [$($groupParams.Name)]" -Event Failed
-    }
-
-
-    try{
-        Hid-Write-Status -Message "Checking if mailbox with name '$($SharedMailboxParams.Name)' exists..." -Event Warning
-        $mailboxCheck = $null
-        do {
-            try{
-                $mailboxCheck = Get-Mailbox $SharedMailboxParams.Name -ErrorAction Stop
-                $identity = $mailboxCheck.Identity
-            }catch{
-                Start-Sleep -Seconds 30
-            }
-        }while ($mailboxCheck -eq $null)    
-
-
-        Hid-Write-Status -Message "Checking if AD group with name '$($groupParams.Name)' exists..." -Event Warning
-        $adGroupCheck = $null
-        do {
-            try{
-                $adGroupCheck = Get-Group -Identity $groupParams.Name -ErrorAction Stop
-                $group = $adGroupCheck.Name
-            }catch{
-                Start-Sleep -Seconds 30
-            }
-        }while ($adGroupCheck -eq $null)
-
-
-        # Add Full Access Permissions
-        if($AutoMapping){
-            $mailboxPermission = Add-MailboxPermission -Identity $identity -AccessRights FullAccess -InheritanceType All -AutoMapping:$true -User $group -ErrorAction Stop
-        }else{
-            $mailboxPermission = Add-MailboxPermission -Identity $identity -AccessRights FullAccess -InheritanceType All -AutoMapping:$false -User $group -ErrorAction Stop
-        }
-
-        Hid-Write-Status -Message "Assigned access rights [FullAccess] for mailbox [$($identity)] to [$($group)] successfully" -Event Success
-        HID-Write-Summary -Message "Assigned access rights [FullAccess] for mailbox [$($identity)] to [$($group)] successfully" -Event Success
-
-        # Add Send As Permissions
-        $recipientPermission = Add-RecipientPermission -Identity $identity -Trustee $group -AccessRights SendAs -Confirm:$false
-
-        Hid-Write-Status -Message "Assigned access rights [SendAs] for mailbox [$($identity)] to [$($group)] successfully" -Event Success
-        HID-Write-Summary -Message "Assigned access rights [SendAs] for mailbox [$($identity)] to [$($group)] successfully" -Event Success
-    } catch {
-        HID-Write-Status -Message "Error assigning access rights [FullAccess] and [SendAs] for mailbox [$($identity)] to [$($group)]. Error: $($_)" -Event Error
-        HID-Write-Summary -Message "Error assigning access rights [FullAccess] and [SendAs] for mailbox [$($identity)] to [$($group)]" -Event Failed
-    }
-} finally {
-    Hid-Write-Status -Event Information -Message "Disconnecting from Office 365.."
-    $exchangeSessionEnd = Disconnect-ExchangeOnline -Confirm:$false -Verbose:$false -ErrorAction Stop
-    Hid-Write-Status -Event Success -Message "Successfully disconnected from Office 365"
-}
-'@; 
-
-	$tmpVariables = @'
-[{"name":"Alias","value":"{{form.alias}}","secret":false,"typeConstraint":"string"},{"name":"Maildomain","value":"{{form.organization.Maildomain}}","secret":false,"typeConstraint":"string"},{"name":"Name","value":"{{form.name}}","secret":false,"typeConstraint":"string"}]
+$tmpTask = @'
+{"name":"Exchange Online - Shared Mailbox - Create","script":"#######################################################################\n# Template: RHo HelloID SA Delegated form task\n# Name: Exchange Online Shared Mailbox - Create\n# Date: 02-05-2024\n#######################################################################\n\n# For basic information about delegated form tasks see:\n# https://docs.helloid.com/en/service-automation/delegated-forms/delegated-form-powershell-scripts.html\n\n# Service automation variables:\n# https://docs.helloid.com/en/service-automation/service-automation-variables.html\n\n#region init\n\n# Set TLS to accept TLS, TLS 1.1 and TLS 1.2\n[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12\n\n$VerbosePreference = \"SilentlyContinue\"\n$InformationPreference = \"Continue\"\n$WarningPreference = \"Continue\"\n\n# global variables (Automation --> Variable libary):\n$TenantId = $EntraTenantId\n$AppID = $EntraAppID\n$Secret = $EntraSecret\n$Organization = $EntraOrganization\n\n# variables configured in form:\n$Maildomain = $form.organization.Maildomain\n$Name = $form.name\n$Alias = $form.alias\n\n# PowerShell commands to import\n$commands = @(\"Get-User\", \"New-Mailbox\", \"Set-Mailbox\")\n#endregion init\n\n#region functions\n\n#endregion functions\n\ntry {\n    #region import module\n    $actionMessage = \"importing $moduleName module\"\n\n    $importModuleParams = @{\n        Name        = \"ExchangeOnlineManagement\"\n        Cmdlet      = $commands\n        ErrorAction = 'Stop'\n    }\n\n    Import-Module @importModuleParams\n    #endregion import module\n\n    #region create access token\n    Write-Verbose \"Creating Access Token\"\n    $actionMessage = \"creating access token\"\n        \n    $body = @{\n        grant_type    = \"client_credentials\"\n        client_id     = \"$AppID\"\n        client_secret = \"$Secret\"\n        resource      = \"https://outlook.office365.com\"\n    }\n\n    $exchangeAccessTokenParams = @{\n        Method          = 'POST'\n        Uri             = \"https://login.microsoftonline.com/$TenantId/oauth2/token\"\n        Body            = $body\n        ContentType     = 'application/x-www-form-urlencoded'\n        UseBasicParsing = $true\n    }\n        \n    $accessToken = (Invoke-RestMethod @exchangeAccessTokenParams).access_token\n    #endregion create access token\n\n    #region connect to Exchange Online\n    Write-Verbose \"Connecting to Exchange Online\"\n    $actionMessage = \"connecting to Exchange Online\"\n\n    $exchangeSessionParams = @{\n        Organization     = $Organization\n        AppID            = $AppID\n        AccessToken      = $accessToken\n        CommandName      = $commands\n        ShowBanner       = $false\n        ShowProgress     = $false\n        TrackPerformance = $false\n        ErrorAction      = 'Stop'\n    }\n    Connect-ExchangeOnline @exchangeSessionParams\n        \n    Write-Information \"Successfully connected to Exchange Online\"\n    #endregion connect to Exchange Online\n\n    #region create shared mailbox\n    $actionMessage = \"creating shared mailbox\"\n    $CreateMailboxParams = @{\n        Shared             = $true\n        Name               = $Name\n        DisplayName        = $Name\n        PrimarySmtpAddress = $Alias.Replace(\" \", \"\") + \"@$Maildomain\"\n        Alias              = $Alias.Replace(\" \", \"\")\n        ErrorAction        = 'Stop'\n    }\n\n    New-Mailbox @CreateMailboxParams\n\n    Write-Information  \"Shared Mailbox [$Name] created successfully\" \n    $Log = @{\n        Action            = \"CreateResource\" # optional. ENUM (undefined = default) \n        System            = \"Exchange Online\" # optional (free format text) \n        Message           = \"Shared Mailbox [$Name] created successfully\"  # required (free format text) \n        IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) \n        TargetDisplayName = $Name # optional (free format text) \n        TargetIdentifier  = $([string]$Alias) # optional (free format text) \n    }\n    #send result back  \n    Write-Information -Tags \"Audit\" -MessageData $log\n    #endregion create shared mailbox\n\n    #region update shared mailbox\n    $actionMessage = \"updating shared mailbox\"\n    Start-Sleep -Seconds 10\n\n    $UpdateMailboxParams = @{\n        Identity                          = \"$($CreateMailboxParams.PrimarySmtpAddress)\"\n        MessageCopyForSendOnBehalfEnabled = $true\n        MessageCopyForSentAsEnabled       = $true\n        ErrorAction                       = 'Stop'\n    }\n\n    Set-Mailbox @UpdateMailboxParams\n \n    Write-Information  \"Shared Mailbox [$Name] updated successfully\" \n    $Log = @{\n        Action            = \"CreateResource\" # optional. ENUM (undefined = default) \n        System            = \"Exchange Online\" # optional (free format text) \n        Message           = \"Shared Mailbox [$Name] updated successfully\"  # required (free format text) \n        IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) \n        TargetDisplayName = $Name # optional (free format text) \n        TargetIdentifier  = $([string]$Alias) # optional (free format text) \n    }\n    #send result back  \n    Write-Information -Tags \"Audit\" -MessageData $log\n    #endregion update shared mailbox\n}\ncatch {\n    $ex = $PSItem\n    if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or\n        $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {\n        $errorMessage = ($ex.ErrorDetails.Message | Convertfrom-json).error_description\n    }\n    else {\n        $errorMessage = $($ex.Exception.message)\n    }\n\n    Write-Error \"Error $actionMessage for Exchange Online shared mailbox [$Name]. Error: $errorMessage\"\n\n    $Log = @{\n        Action            = \"CreateResource\" # optional. ENUM (undefined = default) \n        System            = \"Exchange Online\" # optional (free format text) \n        Message           = \"Error $actionMessage for Exchange Online shared mailbox [$Name]\" # required (free format text) \n        IsError           = $true # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) \n        TargetDisplayName = $Name # optional (free format text) \n        TargetIdentifier  = $([string]$Alias) # optional (free format text) \n    }\n    #send result back  \n    Write-Information -Tags \"Audit\" -MessageData $log\n}","runInCloud":false}
 '@ 
 
-	$delegatedFormTaskGuid = [PSCustomObject]@{} 
-$delegatedFormTaskName = @'
-Shared-mailbox-create
-'@
-	Invoke-HelloIDAutomationTask -TaskName $delegatedFormTaskName -UseTemplate "False" -AutomationContainer "8" -Variables $tmpVariables -PowershellScript $tmpScript -ObjectGuid $delegatedFormRef.guid -ForceCreateTask $true -returnObject ([Ref]$delegatedFormTaskGuid) 
-} else {
-	Write-Warning "Delegated form '$delegatedFormName' already exists. Nothing to do with the Delegated Form task..." 
-}
-<# End: Delegated Form Task #>
+Invoke-HelloIDDelegatedForm -DelegatedFormName $delegatedFormName -DynamicFormGuid $dynamicFormGuid -AccessGroups $delegatedFormAccessGroupGuids -Categories $delegatedFormCategoryGuids -UseFaIcon "True" -FaIcon "fa fa-inbox" -task $tmpTask -returnObject ([Ref]$delegatedFormRef) 
+<# End: Delegated Form #>
+

@@ -1,0 +1,26 @@
+[
+  {
+    "description": null,
+    "translateDescription": false,
+    "inputFieldType": 1,
+    "key": "Name",
+    "type": 0,
+    "options": 1
+  },
+  {
+    "description": null,
+    "translateDescription": false,
+    "inputFieldType": 1,
+    "key": "Alias",
+    "type": 0,
+    "options": 1
+  },
+  {
+    "description": null,
+    "translateDescription": false,
+    "inputFieldType": 1,
+    "key": "Organization",
+    "type": 0,
+    "options": 1
+  }
+]
