@@ -1,54 +1,110 @@
 [
-    {
-        "key":  "organization",
-        "templateOptions":  {
-                                "label":  "Organization",
-                                "required":  true,
-                                "useObjects":  false,
-                                "useDataSource":  true,
-                                "useFilter":  true,
-                                "options":  [
-
-                                            ],
-                                "valueField":  "Maildomain",
-                                "textField":  "Naam",
-                                "dataSourceConfig":  {
-                                                         "dataSourceGuid":  "$dataSourceGuid_0",
-                                                         "input":  {
-                                                                       "propertyInputs":  [
-
-                                                                                          ]
-                                                                   }
-                                                     }
-                            },
-        "type":  "dropdown",
-        "summaryVisibility":  "Show",
-        "textOrLabel":  "text",
-        "requiresTemplateOptions":  true,
-        "requiresKey":  true
+  {
+    "templateOptions": {
+      "title": "Retrieving this information from Exchange Online takes an average of +/- 10 seconds.",
+      "titleField": "",
+      "bannerType": "Info",
+      "useBody": true
     },
-    {
-        "key":  "name",
-        "templateOptions":  {
-                                "label":  "name",
-                                "placeholder":  "IT department",
-                                "required":  true,
-                                "minLength":  2
-                            },
-        "type":  "input",
-        "summaryVisibility":  "Show",
-        "requiresTemplateOptions":  true,
-        "requiresKey":  true
+    "type": "textbanner",
+    "summaryVisibility": "Show",
+    "body": "Please wait so we can validate the input.",
+    "requiresTemplateOptions": false,
+    "requiresKey": false,
+    "requiresDataSource": false
+  },
+  {
+    "key": "organization",
+    "templateOptions": {
+      "label": "Organization",
+      "required": true,
+      "useObjects": false,
+      "useDataSource": true,
+      "useFilter": true,
+      "options": [],
+      "valueField": "Naam",
+      "textField": "Naam",
+      "dataSourceConfig": {
+        "dataSourceGuid": "$dataSourceGuid_0",
+        "input": {
+          "propertyInputs": []
+        }
+      },
+      "useDefault": true,
+      "defaultSelectorProperty": "Naam"
     },
-    {
-        "key":  "alias",
-        "templateOptions":  {
-                                "label":  "Alias",
-                                "placeholder":  "it-department"
-                            },
-        "type":  "input",
-        "summaryVisibility":  "Show",
-        "requiresTemplateOptions":  true,
-        "requiresKey":  true
-    }
+    "type": "dropdown",
+    "summaryVisibility": "Show",
+    "textOrLabel": "text",
+    "requiresTemplateOptions": true,
+    "requiresKey": true,
+    "requiresDataSource": false
+  },
+  {
+    "key": "name",
+    "templateOptions": {
+      "label": "name",
+      "placeholder": "IT department",
+      "required": true,
+      "minLength": 2
+    },
+    "type": "input",
+    "summaryVisibility": "Show",
+    "requiresTemplateOptions": true,
+    "requiresKey": true,
+    "requiresDataSource": false
+  },
+  {
+    "key": "alias",
+    "templateOptions": {
+      "label": "Alias",
+      "placeholder": "it-department"
+    },
+    "type": "input",
+    "summaryVisibility": "Show",
+    "requiresTemplateOptions": true,
+    "requiresKey": true,
+    "requiresDataSource": false
+  },
+  {
+    "key": "Validation",
+    "templateOptions": {
+      "label": "Validate",
+      "readonly": true,
+      "useDataSource": true,
+      "pattern": "^Valid.*",
+      "dataSourceConfig": {
+        "dataSourceGuid": "$dataSourceGuid_1",
+        "input": {
+          "propertyInputs": [
+            {
+              "propertyName": "Name",
+              "otherFieldValue": {
+                "otherFieldKey": "name"
+              }
+            },
+            {
+              "propertyName": "Alias",
+              "otherFieldValue": {
+                "otherFieldKey": "alias"
+              }
+            },
+            {
+              "propertyName": "Organization",
+              "otherFieldValue": {
+                "otherFieldKey": "organization"
+              }
+            }
+          ]
+        }
+      },
+      "displayField": "text",
+      "required": true
+    },
+    "type": "input",
+    "summaryVisibility": "Show",
+    "requiresTemplateOptions": true,
+    "requiresKey": true,
+    "requiresDataSource": false
+  }
 ]
