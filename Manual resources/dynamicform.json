@@ -58,7 +58,8 @@
     "key": "alias",
     "templateOptions": {
       "label": "Alias",
-      "placeholder": "it-department"
+      "placeholder": "it-department",
+      "required": true
     },
     "type": "input",
     "summaryVisibility": "Show",

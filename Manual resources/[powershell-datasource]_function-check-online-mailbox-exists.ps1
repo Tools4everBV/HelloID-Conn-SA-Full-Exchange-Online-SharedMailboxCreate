@@ -1,7 +1,7 @@
 #######################################################################
-# Template: RHo HelloID SA Powershell data source
+# Template: HelloID SA Powershell data source
 # Name: function-check-online-mailbox-exists
-# Date: 05-02-2024
+# Date: 28-11-2024
 #######################################################################
 
 # For basic information about powershell data sources see:
@@ -11,8 +11,8 @@
 # https://docs.helloid.com/en/service-automation/service-automation-variables.html
 
 #region init
-# Set TLS to accept TLS, TLS 1.1 and TLS 1.2
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
+# Enable TLS1.2
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
 $VerbosePreference = "SilentlyContinue"
 $InformationPreference = "Continue"

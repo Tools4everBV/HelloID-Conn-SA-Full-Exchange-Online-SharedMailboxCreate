@@ -1,7 +1,7 @@
 #######################################################################
-# Template: RHo HelloID SA Delegated form task
+# Template: HelloID SA Delegated form task
 # Name: Exchange Online Shared Mailbox - Create
-# Date: 02-05-2024
+# Date: 28-11-2024
 #######################################################################
 
 # For basic information about delegated form tasks see:
@@ -12,8 +12,8 @@
 
 #region init
 
-# Set TLS to accept TLS, TLS 1.1 and TLS 1.2
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
+# Enable TLS1.2
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
 $VerbosePreference = "SilentlyContinue"
 $InformationPreference = "Continue"
