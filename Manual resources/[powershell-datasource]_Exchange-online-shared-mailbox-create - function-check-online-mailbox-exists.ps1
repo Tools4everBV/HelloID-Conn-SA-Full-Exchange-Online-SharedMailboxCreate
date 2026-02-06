@@ -6,15 +6,15 @@ $InformationPreference = "Continue"
 $WarningPreference = "Continue"
 
 # variables configured in form:
-$Maildomain = $form.organization.Maildomain
-$Name = $form.name
-$Alias = $form.alias
+$Maildomain = $datasource.Organization.Maildomain
+$Name = $datasource.name
+$Alias = $datasource.alias
+$PrimarySmtpAddress = $Alias.Replace(" ", "") + "@$Maildomain"
 
 # PowerShell commands to import
-$commands = @("Get-User", "New-Mailbox", "Set-Mailbox")
+$commands = @("Get-User", "Get-Mailbox")
 #endregion init
 
-#region functions
 function Get-MSEntraCertificate {
     [CmdletBinding()]
     param()
@@ -27,8 +27,6 @@ function Get-MSEntraCertificate {
         $PSCmdlet.ThrowTerminatingError($_)
     }
 }
-#endregion functions
-
 
 #region Import module & connect
 try {    
@@ -79,85 +77,50 @@ catch {
 }
 
 
-try{
-    #region create shared mailbox
-    $actionMessage = "creating shared mailbox"
-    $CreateMailboxParams = @{
-        Shared             = $true
-        Name               = $Name
-        DisplayName        = $Name
-        PrimarySmtpAddress = $Alias.Replace(" ", "") + "@$Maildomain"
-        Alias              = $Alias.Replace(" ", "")
-        ErrorAction        = 'Stop'
+    #region check shared mailbox
+try {
+    $actionMessage = "getting shared mailbox"
+
+    $SharedMailboxParams = @{
+        Filter               = "{Alias -eq '$Alias' -or Name -eq '$Name' -or PrimarySmtpAddress -eq '$PrimarySmtpAddress'}"
+        # RecipientTypeDetails = 'SharedMailbox'
+        ErrorAction          = 'Stop'        
     }
-
-    New-Mailbox @CreateMailboxParams
-
-    Write-Information  "Shared Mailbox [$Name] created successfully" 
-    $Log = @{
-        Action            = "CreateResource" # optional. ENUM (undefined = default) 
-        System            = "Exchange Online" # optional (free format text) 
-        Message           = "Shared Mailbox [$Name] created successfully"  # required (free format text) 
-        IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $Name # optional (free format text) 
-        TargetIdentifier  = $([string]$Alias) # optional (free format text) 
+    
+    $SharedMailbox = Get-Mailbox @SharedMailboxParams
+   
+    if ([string]::IsNullOrEmpty($SharedMailbox)) {
+        Write-Information  "Shared Mailbox name [$Name] is available"
+        $outputMessage = "Valid | Shared Mailbox name [$Name] is available"
+        $returnObject = @{
+            text = $outputMessage
+        }     
     }
-    #send result back  
-    Write-Information -Tags "Audit" -MessageData $log
-    #endregion create shared mailbox
-
-    #region update shared mailbox
-    $actionMessage = "updating shared mailbox"
-    Start-Sleep -Seconds 10
-
-    $UpdateMailboxParams = @{
-        Identity                          = "$($CreateMailboxParams.PrimarySmtpAddress)"
-        MessageCopyForSendOnBehalfEnabled = $true
-        MessageCopyForSentAsEnabled       = $true
-        ErrorAction                       = 'Stop'
+    else {
+        Write-Information  "Shared Mailbox [$Name] exists. Please try another name" 
+        $outputMessage = "Invalid | Shared Mailbox name [$Name] exists. Please try another name"
+        $returnObject = @{
+            text = $outputMessage
+        }
     }
-
-    Set-Mailbox @UpdateMailboxParams
- 
-    Write-Information  "Shared Mailbox [$Name] updated successfully" 
-    $Log = @{
-        Action            = "CreateResource" # optional. ENUM (undefined = default) 
-        System            = "Exchange Online" # optional (free format text) 
-        Message           = "Shared Mailbox [$Name] updated successfully"  # required (free format text) 
-        IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $Name # optional (free format text) 
-        TargetIdentifier  = $([string]$Alias) # optional (free format text) 
-    }
-    #send result back  
-    Write-Information -Tags "Audit" -MessageData $log
-    #endregion update shared mailbox
+    #endregion check shared mailbox           
 }
 catch {
     $ex = $PSItem
     if (-not [string]::IsNullOrEmpty($ex.Exception.Data.RemoteException.Message)) {
         $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Data.RemoteException.Message)"
-        $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Data.RemoteException.Message)"
+        $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Data.RemoteException.Message)"        
     }
     else {
         $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
         $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
     }
-
-    $Log = @{
-        Action            = "CreateResource" # optional. ENUM (undefined = default) 
-        System            = "Exchange Online" # optional (free format text) 
-        Message           = "Error $actionMessage for Exchange Online shared mailbox [$Name]" # required (free format text) 
-        IsError           = $true # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $Name # optional (free format text) 
-        TargetIdentifier  = $([string]$Alias) # optional (free format text) 
-    }
-    
-    Write-Information -Tags "Audit" -MessageData $log
     Write-Warning $warningMessage
     Write-Error $auditMessage
-    # exit # use when using multiple try/catch and the script must stop
 }
 finally {
+    Write-Output $returnObject 
+
     # Docs: https://learn.microsoft.com/en-us/powershell/module/exchange/disconnect-exchangeonline?view=exchange-ps
     $deleteExchangeSessionSplatParams = @{
         Confirm     = $false
@@ -166,3 +129,4 @@ finally {
     $null = Disconnect-ExchangeOnline @deleteExchangeSessionSplatParams
     Write-Information "Disconnected from Microsoft Exchange Online"
 }
+#endregion lookup

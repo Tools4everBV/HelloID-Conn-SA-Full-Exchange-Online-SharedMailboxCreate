@@ -1,102 +1,100 @@
 # HelloID-Conn-SA-Full-Exchange-Online-SharedMailboxCreate
 
-> [!IMPORTANT]
-> This repository contains the connector and configuration code only. The implementer is responsible for acquiring the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements.
+| :information_source: Information |
+| :------------------------------- |
+| This repository contains the connector and configuration code only. The implementer is responsible for acquiring the connection details such as organization name, application ID, certificate, etc. You might need to coordinate with the client's application manager before implementing this connector. |
 
-<p align="center">
-  <img src="https://github.com/Tools4everBV/HelloID-Conn-SA-Full-Exchange-Online-SharedMailboxCreate/blob/main/Logo.png?raw=true">
-</p>
+## Description
+HelloID-Conn-SA-Full-Exchange-Online-SharedMailboxCreate is a template designed for use with HelloID Service Automation (SA) Delegated Forms. It can be imported into HelloID and customized according to your requirements.
 
-## Table of contents
+By using this delegated form, you can create a shared mailbox in Exchange Online. The form workflow includes:
+ 1. Select the organization/mail domain
+ 2. Enter the mailbox name and alias
+ 3. Validate the mailbox availability (name/alias/primary SMTP)
+ 4. Submit the form to create and update the mailbox in Exchange Online
 
-- [HelloID-Conn-SA-Full-Exchange-Online-SharedMailboxCreate](#helloid-conn-sa-full-exchange-online-sharedmailboxcreate)
-  - [Table of contents](#table-of-contents)
-  - [Requirements](#requirements)
-  - [Remarks](#remarks)
-  - [Introduction](#introduction)
-      - [Description](#description)
-      - [ExchangeOnlineManagement module](#exchangeonlinemanagement-module)
-      - [Form Options](#form-options)
-      - [Task Actions](#task-actions)
-  - [Connector Setup](#connector-setup)
-    - [Variable Library - User Defined Variables](#variable-library---user-defined-variables)
-  - [Getting help](#getting-help)
-  - [HelloID docs](#helloid-docs)
+Notes shown in the form:
+- Retrieving and validating data typically takes ~10 seconds
 
-## Requirements
-1. **HelloID Environment**:
-   - Set up your _HelloID_ environment.
-2. **Exchange Online PowerShell V3 module**:
-   - This HelloID Service Automation Delegated Form uses the [Exchange Online PowerShell V3 module](https://docs.microsoft.com/en-us/powershell/exchange/exchange-online-powershell-v2?view=exchange-ps). A HelloID agent is required to import the Exchange Online module.
-3. **Entra ID Application Registration**:
-   - App registration with `API permissions` select `APIs my organization uses` search for `Office 365 Exchange Online`. Select `Application permissions`:
-     -  `Exchange.ManageAsApp`
-   - The following information for the app registration is needed in HelloID:
-     - `Application (client) ID`
-     - `Directory (tenant) ID`
-     - `Secret Value`
-4. **Entra ID Role**:
-   - The `Exchange Administrator` should provide the required permissions for any task in Exchange Online PowerShell.
-     -  To assign the role(s) to your application, navigate to `Roles and administrators`.
-     -  Search and select `Exchange Administrator` click `Add assignments`. Select the app registration that you created in step 3.
-     -  Click `Next`, assignment type `Active`.
+## Getting started
+### Requirements
+
+#### App Registration & Certificate Setup
+
+Before implementing this connector, make sure to configure a Microsoft Entra ID, an App Registration. During the setup process, you’ll create a new App Registration in the Entra portal, assign the necessary API permissions (such as user and group read/write), and generate and assign a certificate.
+
+Follow the official Microsoft documentation for creating an App Registration and setting up certificate-based authentication:
+- [App-only authentication with certificate (Exchange Online)](https://learn.microsoft.com/en-us/powershell/exchange/app-only-auth-powershell-v2?view=exchange-ps#set-up-app-only-authentication)
+
+#### HelloID-specific configuration
+
+Once you have completed the Microsoft setup and followed their best practices, configure the following HelloID-specific requirements.
+
+- **API Permissions** (Application permissions):
+  - `User.ReadWrite.All`
+  - `Group.ReadWrite.All`
+  - `GroupMember.ReadWrite.All`
+  - `UserAuthenticationMethod.ReadWrite.All`
+  - `User.EnableDisableAccount.All`
+  - `User-PasswordProfile.ReadWrite.All`
+  - `User-Phone.ReadWrite.All`
+  - **Entra ID Role assignment:**
+  - Assign the **Exchange Recipient Administrator** role to the App Registration
+- **Certificate:**
+  - Upload the public key file (.cer) in Entra ID
+  - Provide the certificate as a Base64 string in HelloID. For instructions on creating the certificate and obtaining the base64 string, refer to our forum post: [Setting up a certificate for Microsoft Graph API in HelloID connectors](https://forum.helloid.com/forum/helloid-provisioning/5338-instruction-setting-up-a-certificate-for-microsoft-graph-api-in-helloid-connectors#post5338)
+
+### Connection settings
+
+The following user-defined variables are used by the connector.
+
+| Setting     | Description                              | Mandatory |
+| ----------- | ---------------------------------------- | --------- |
+| EntraTenantId | Entra tenant ID                       | Yes       |
+| EntraAppId    | Entra application (client) ID         | Yes       |
+| EntraCertificateBase64String | Entra Certificate string      | Yes       |
+| EntraCertificatePassword | Entra Certificate password      | Yes       |
 
 ## Remarks
-- None at this time.
 
-## Introduction
+- **Validation data source**:
+  - The form includes a validation field that checks mailbox availability using Exchange Online cmdlets.
+  - It verifies `Alias`, `Name`, and `PrimarySmtpAddress` using `Get-Mailbox`.
+- **Alias normalization**:
+  - The alias and primary SMTP address are derived from the alias with spaces removed.
+- **Mailbox creation and update**:
+  - After `New-Mailbox` completes, the script waits briefly and then applies mailbox settings via `Set-Mailbox` (e.g., message copy settings for Send As/Send on Behalf scenarios).
+- **Performance notes**:
+  - Validation/creation typically completes in ~10 seconds; actual times may vary.
+- **Duplicate import**:
+  - When importing a duplicate form, resource names can be suffixed automatically, as configured in the script.
 
-#### Description
-_HelloID-Conn-SA-Full-Exchange-Online-SharedMailboxCreate_ is a template designed for use with HelloID Service Automation (SA) Delegated Forms. It can be imported into HelloID and customized according to your requirements. 
+## Development resources
 
-By using this delegated form, you can create a shared mailbox in Exchange Online. The following options are available:
- 1. Select a predefined `organization`.
- 2. Enter the shared mailbox `name`.
- 3. Enter the shared mailbox `alias`.
- 4. A data source will `validate` the input in exchange online. If this is valid you can submit the form
- 5. The task will `create` the shared mailbox and wil set the properties `MessageCopyForSendOnBehalfEnabled` and `MessageCopyForSentAsEnabled`
+### API endpoints
 
-#### ExchangeOnlineManagement module
-The `ExchangeOnlineManagement` module provide a set of commands to interact with Exchange Online. The commands used are listed in the table below.
+This connector uses Exchange Online PowerShell (EXO) cmdlets via the `ExchangeOnlineManagement` module:
 
-| Endpoint    | Description                                                                   |
-| ----------- | ----------------------------------------------------------------------------- |
-| Get-User    | Required for Get-Mailbox / New-Mailbox / Set-Mailbox                          |
-| Get-Mailbox | To validate the input in Exchange Online                                      |
-| New-Mailbox | To create the shared mailbox in Exchange Online                               |
-| Set-Mailbox | To set attributes that are not supported in New-Mailbox on the shared mailbox |
+| Cmdlet/Operation         | Description                                  |
+|--------------------------|----------------------------------------------|
+| Connect-ExchangeOnline   | Establish EXO session using app-only auth    |
+| Get-Mailbox              | Check mailbox existence/availability         |
+| New-Mailbox              | Create shared mailbox                        |
+| Set-Mailbox              | Update mailbox settings after creation       |
+| Disconnect-ExchangeOnline| Close EXO session                            |
 
-#### Form Options
-The following options are available in the form:
+### API documentation
 
-1. **Input and validate data**:
-   - Select a `organization`, enter a `name` and enter a `alias`. The Powershell data source will `validate` the input in exchange online.
-
-#### Task Actions
-The following actions will be performed after submitting the form:
-
-1. **Creating the shared mailbox in exchange online**:
-   - The New-Mailbox command will be used to create the shared mailbox
-2. **Updating the shared mailbox in exchange online**:
-   - The Set-Mailbox command will be used to set the properties `MessageCopyForSendOnBehalfEnabled` and `MessageCopyForSentAsEnabled`
-
-## Connector Setup
-### Variable Library - User Defined Variables
-The following user-defined variables are used by the connector. Ensure that you check and set the correct values required to connect to the API.
-
-| Setting             | Description                                                                                |
-| ------------------- | ------------------------------------------------------------------------------------------ |
-| `EntraOrganization` | The name of the organization to connect to and where the Entra ID App Registration exists. |
-| `EntraTenantId`     | The ID to the Tenant in Microsoft Entra ID                                                 |
-| `EntraAppId`        | The ID to the App Registration in Microsoft Entra ID                                       |
-| `EntraAppSecret`    | The Client Secret to the App Registration in Microsoft Entra ID                            |
+- Exchange Online PowerShell overview: https://learn.microsoft.com/powershell/exchange/exchange-online-powershell
+- Connect-ExchangeOnline: https://learn.microsoft.com/powershell/module/exchange/connect-exchangeonline
+- Get-Mailbox: https://learn.microsoft.com/powershell/module/exchange/get-mailbox
+- New-Mailbox: https://learn.microsoft.com/powershell/module/exchange/new-mailbox
+- Set-Mailbox: https://learn.microsoft.com/powershell/module/exchange/set-mailbox
+- Disconnect-ExchangeOnline: https://learn.microsoft.com/powershell/module/exchange/disconnect-exchangeonline
 
 ## Getting help
-> [!TIP]
-> _For more information on Delegated Forms, please refer to our [documentation](https://docs.helloid.com/en/service-automation/delegated-forms.html) pages_.
-
-> [!TIP]
->  _If you need help, feel free to ask questions on our [forum](https://forum.helloid.com)_.
+> :bulb: **Tip:**  
+> For more information on Delegated Forms, please refer to our documentation pages: https://docs.helloid.com/en/service-automation/delegated-forms.html
 
 ## HelloID docs
 The official HelloID documentation can be found at: https://docs.helloid.com/
