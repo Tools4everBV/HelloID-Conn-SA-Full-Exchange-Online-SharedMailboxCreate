@@ -1,19 +1,7 @@
-# Enable TLS1.2
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
-
-$VerbosePreference = "SilentlyContinue"
-$InformationPreference = "Continue"
-$WarningPreference = "Continue"
-
-# variables configured in form:
-$Maildomain = $datasource.Organization.Maildomain
-$Name = $datasource.name
-$Alias = $datasource.alias
-$PrimarySmtpAddress = $Alias.Replace(" ", "") + "@$Maildomain"
+$Mailsuffix = $ExchangeOnlineDistributionGroupDomain
 
 # PowerShell commands to import
-$commands = @("Get-User", "Get-Mailbox")
-#endregion init
+$commands = @("Get-DistributionGroup")
 
 function Get-MSEntraCertificate {
     [CmdletBinding()]
@@ -76,36 +64,57 @@ catch {
     Write-Error $auditMessage
 }
 
-
-    #region check shared mailbox
 try {
-    $actionMessage = "getting shared mailbox"
-
-    $SharedMailboxParams = @{
-        Filter               = "{Alias -eq '$Alias' -or Name -eq '$Name' -or PrimarySmtpAddress -eq '$PrimarySmtpAddress'}"
-        # RecipientTypeDetails = 'SharedMailbox'
-        ErrorAction          = 'Stop'        
-    }
+    $iterationMax = 10
+    $iterationStart = 1;
+        
+    for($i = $iterationStart; $i -lt $iterationMax; $i++) {
+        if($i -eq $iterationStart) {
+            $tempName = $datasource.name
+            $DisplayName =  $tempName
     
-    $SharedMailbox = Get-Mailbox @SharedMailboxParams
-   
-    if ([string]::IsNullOrEmpty($SharedMailbox)) {
-        Write-Information  "Shared Mailbox name [$Name] is available"
-        $outputMessage = "Valid | Shared Mailbox name [$Name] is available"
-        $returnObject = @{
-            text = $outputMessage
-        }     
-    }
-    else {
-        Write-Information  "Shared Mailbox [$Name] exists. Please try another name" 
-        $outputMessage = "Invalid | Shared Mailbox name [$Name] exists. Please try another name"
-        $returnObject = @{
-            text = $outputMessage
+            $Name =   $tempName.Replace(" ","")
+
+            $PrimarySmtpAddress =   $tempName.Replace(" ","") + "@" + $Mailsuffix
+            
+            $Alias =   $tempName.Replace(" ","")
+
+            $SamAccountName = $Alias
+         } else {
+            $tempName = $datasource.name
+            $DisplayName =  $tempName + "$i"
+    
+            $Name =   ($tempName + "$i").Replace(" ","")
+
+            $PrimarySmtpAddress =   ($tempName + "$i").Replace(" ","") + "@" + $Mailsuffix 
+            
+            $Alias =   ($tempName + "$i").Replace(" ","")
+
+            $SamAccountName = $Alias
+        }
+        
+        Write-Information -Message "Searching for Distribution Group Name=$Name or DisplayName=$DisplayName or EmailAddresses=$PrimarySmtpAddress or Alias=$Alias"
+
+        $found = Get-DistributionGroup -Filter "Name -eq '$Name' -or DisplayName -eq '$DisplayName' -or EmailAddresses -eq '$PrimarySmtpAddress' -or Alias -eq '$Alias'"
+
+        if(@($found).count -eq 0) {
+            $returnObject = @{
+                name=$Name;
+                displayName=$DisplayName;
+                primarySmtpAddress=$PrimarySmtpAddress;
+                alias=$Alias;
+                samAccountName=$SamAccountName
+            }
+            Write-Information -Message "Distribution Group Name=$Name or DisplayName=$DisplayName or EmailAddresses=$PrimarySmtpAddress or Alias=$Alias not found"
+            break;
+        } else {
+            Write-Warning -Message "Distribution Group Name=$Name or DisplayName=$DisplayName or EmailAddresses=$PrimarySmtpAddress or Alias=$Alias found"
         }
     }
-    #endregion check shared mailbox           
-}
-catch {
+    
+    Write-Output $returnObject
+
+} catch {
     $ex = $PSItem
     if (-not [string]::IsNullOrEmpty($ex.Exception.Data.RemoteException.Message)) {
         $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Data.RemoteException.Message)"
@@ -117,10 +126,8 @@ catch {
     }
     Write-Warning $warningMessage
     Write-Error $auditMessage
-}
-finally {
-    Write-Output $returnObject 
-
+    # exit # use when using multiple try/catch and the script must stop
+} finally {
     # Docs: https://learn.microsoft.com/en-us/powershell/module/exchange/disconnect-exchangeonline?view=exchange-ps
     $deleteExchangeSessionSplatParams = @{
         Confirm     = $false
@@ -129,4 +136,3 @@ finally {
     $null = Disconnect-ExchangeOnline @deleteExchangeSessionSplatParams
     Write-Information "Disconnected from Microsoft Exchange Online"
 }
-#endregion lookup

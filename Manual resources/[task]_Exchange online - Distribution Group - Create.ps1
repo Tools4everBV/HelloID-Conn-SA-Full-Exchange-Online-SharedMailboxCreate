@@ -1,20 +1,8 @@
-# Enable TLS1.2
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
-
-$VerbosePreference = "SilentlyContinue"
-$InformationPreference = "Continue"
-$WarningPreference = "Continue"
-
-# variables configured in form:
-$Maildomain = $form.organization.Maildomain
-$Name = $form.name
-$Alias = $form.alias
+$GroupType = "Distribution Group" # "Mail-enabled Security Group" or "Distribution Group"
 
 # PowerShell commands to import
-$commands = @("Get-User", "New-Mailbox", "Set-Mailbox")
-#endregion init
+$commands = @("New-DistributionGroup")
 
-#region functions
 function Get-MSEntraCertificate {
     [CmdletBinding()]
     param()
@@ -27,8 +15,6 @@ function Get-MSEntraCertificate {
         $PSCmdlet.ThrowTerminatingError($_)
     }
 }
-#endregion functions
-
 
 #region Import module & connect
 try {    
@@ -79,60 +65,44 @@ catch {
 }
 
 
-try{
-    #region create shared mailbox
-    $actionMessage = "creating shared mailbox"
-    $CreateMailboxParams = @{
-        Shared             = $true
-        Name               = $Name
-        DisplayName        = $Name
-        PrimarySmtpAddress = $Alias.Replace(" ", "") + "@$Maildomain"
-        Alias              = $Alias.Replace(" ", "")
-        ErrorAction        = 'Stop'
+# Create Mail-enabled Security Group
+try{   
+    $OwnersToAdd  = ($form.multiselectOwners.UserPrincipalName)
+    $MembersToAdd = ($form.multiselectMembers.UserPrincipalName)
+
+    $groupParams = @{
+        Name                =   $form.naming.name
+        DisplayName         =   $form.naming.displayName
+        PrimarySmtpAddress  =   $form.naming.primarySmtpAddress
+        Alias               =   $form.naming.alias
+        ManagedBy           =   $OwnersToAdd
+        Members             =   $MembersToAdd
+        CopyOwnerToMember   =   $true
     }
+    
+    Switch($GroupType){
+        'Mail-enabled Security Group' {
+            $mailEnabledSecurityGroup = New-DistributionGroup -Type security @groupParams -ErrorAction Stop
+        }
 
-    New-Mailbox @CreateMailboxParams
-
-    Write-Information  "Shared Mailbox [$Name] created successfully" 
+        'Distribution Group' {
+            $mailEnabledSecurityGroup = New-DistributionGroup @groupParams -ErrorAction Stop
+        }
+    }
+    
     $Log = @{
         Action            = "CreateResource" # optional. ENUM (undefined = default) 
         System            = "Exchange Online" # optional (free format text) 
-        Message           = "Shared Mailbox [$Name] created successfully"  # required (free format text) 
+        Message           = "Created distribution group:  $($mailEnabledSecurityGroup.displayName)" # required (free format text) 
         IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $Name # optional (free format text) 
-        TargetIdentifier  = $([string]$Alias) # optional (free format text) 
+        TargetDisplayName = $($mailEnabledSecurityGroup.displayName) # optional (free format text) 
+        TargetIdentifier  = $([string]$mailEnabledSecurityGroup.Guid)  # optional (free format text) 
     }
     #send result back  
+
     Write-Information -Tags "Audit" -MessageData $log
-    #endregion create shared mailbox
-
-    #region update shared mailbox
-    $actionMessage = "updating shared mailbox"
-    Start-Sleep -Seconds 10
-
-    $UpdateMailboxParams = @{
-        Identity                          = "$($CreateMailboxParams.PrimarySmtpAddress)"
-        MessageCopyForSendOnBehalfEnabled = $true
-        MessageCopyForSentAsEnabled       = $true
-        ErrorAction                       = 'Stop'
-    }
-
-    Set-Mailbox @UpdateMailboxParams
- 
-    Write-Information  "Shared Mailbox [$Name] updated successfully" 
-    $Log = @{
-        Action            = "CreateResource" # optional. ENUM (undefined = default) 
-        System            = "Exchange Online" # optional (free format text) 
-        Message           = "Shared Mailbox [$Name] updated successfully"  # required (free format text) 
-        IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $Name # optional (free format text) 
-        TargetIdentifier  = $([string]$Alias) # optional (free format text) 
-    }
-    #send result back  
-    Write-Information -Tags "Audit" -MessageData $log
-    #endregion update shared mailbox
-}
-catch {
+  
+} catch {
     $ex = $PSItem
     if (-not [string]::IsNullOrEmpty($ex.Exception.Data.RemoteException.Message)) {
         $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Data.RemoteException.Message)"
@@ -142,16 +112,14 @@ catch {
         $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
         $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
     }
-
-    $Log = @{
+$Log = @{
         Action            = "CreateResource" # optional. ENUM (undefined = default) 
         System            = "Exchange Online" # optional (free format text) 
-        Message           = "Error $actionMessage for Exchange Online shared mailbox [$Name]" # required (free format text) 
+        Message           = "Error creating $GroupType [$($groupParams.Name)]. Error: $($_.Exception.Message)" # required (free format text) 
         IsError           = $true # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $Name # optional (free format text) 
-        TargetIdentifier  = $([string]$Alias) # optional (free format text) 
+        TargetDisplayName = $($groupParams.displayName) # optional (free format text) 
+        
     }
-    
     Write-Information -Tags "Audit" -MessageData $log
     Write-Warning $warningMessage
     Write-Error $auditMessage
