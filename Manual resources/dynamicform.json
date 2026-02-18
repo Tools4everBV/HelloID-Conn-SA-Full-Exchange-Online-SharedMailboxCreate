@@ -14,9 +14,36 @@
     "requiresDataSource": false
   },
   {
+    "key": "organization",
+    "templateOptions": {
+      "label": "Organization",
+      "required": true,
+      "useObjects": false,
+      "useDataSource": true,
+      "useFilter": true,
+      "options": [],
+      "valueField": "Naam",
+      "textField": "Naam",
+      "dataSourceConfig": {
+        "dataSourceGuid": "$dataSourceGuid_0",
+        "input": {
+          "propertyInputs": []
+        }
+      },
+      "useDefault": true,
+      "defaultSelectorProperty": "Naam"
+    },
+    "type": "dropdown",
+    "summaryVisibility": "Show",
+    "textOrLabel": "text",
+    "requiresTemplateOptions": true,
+    "requiresKey": true,
+    "requiresDataSource": false
+  },
+  {
     "key": "name",
     "templateOptions": {
-      "label": "Name",
+      "label": "name",
       "placeholder": "IT department",
       "required": true,
       "minLength": 2
@@ -28,108 +55,55 @@
     "requiresDataSource": false
   },
   {
-    "key": "naming",
+    "key": "alias",
     "templateOptions": {
-      "label": "Naming",
-      "required": true,
-      "grid": {
-        "columns": [
-          {
-            "headerName": "Name",
-            "field": "name"
-          },
-          {
-            "headerName": "Display Name",
-            "field": "displayName"
-          },
-          {
-            "headerName": "Primary Smtp Address",
-            "field": "primarySmtpAddress"
-          },
-          {
-            "headerName": "Alias",
-            "field": "alias"
-          }
-        ],
-        "height": 300,
-        "rowSelection": "single"
-      },
-      "dataSourceConfig": {
-        "dataSourceGuid": "$dataSourceGuid_0",
-        "input": {
-          "propertyInputs": [
-            {
-              "propertyName": "name",
-              "otherFieldValue": {
-                "otherFieldKey": "name"
-              }
-            }
-          ]
-        }
-      },
-      "useDefault": true,
-      "defaultSelectorProperty": "name"
-    },
-    "type": "grid",
-    "summaryVisibility": "Show",
-    "requiresTemplateOptions": true,
-    "requiresKey": true,
-    "requiresDataSource": true
-  },
-  {
-    "key": "multiselectOwners",
-    "templateOptions": {
-      "label": "Owners",
-      "useObjects": false,
-      "useFilter": true,
-      "options": [
-        "Option 1",
-        "Option 2",
-        "Option 3"
-      ],
-      "useDataSource": true,
-      "valueField": "name",
-      "textField": "name",
-      "dataSourceConfig": {
-        "dataSourceGuid": "$dataSourceGuid_1",
-        "input": {
-          "propertyInputs": []
-        }
-      },
+      "label": "Alias",
+      "placeholder": "it-department",
       "required": true
     },
-    "type": "multiselect",
+    "type": "input",
     "summaryVisibility": "Show",
-    "textOrLabel": "text",
     "requiresTemplateOptions": true,
     "requiresKey": true,
     "requiresDataSource": false
   },
   {
-    "key": "multiselectMembers",
+    "key": "Validation",
     "templateOptions": {
-      "label": "Members",
-      "useObjects": false,
-      "useFilter": true,
-      "options": [
-        "Option 1",
-        "Option 2",
-        "Option 3"
-      ],
+      "label": "Validate",
+      "readonly": true,
       "useDataSource": true,
-      "valueField": "name",
-      "textField": "name",
+      "pattern": "^Valid.*",
       "dataSourceConfig": {
-        "dataSourceGuid": "$dataSourceGuid_2",
+        "dataSourceGuid": "$dataSourceGuid_1",
         "input": {
-          "propertyInputs": []
+          "propertyInputs": [
+            {
+              "propertyName": "Name",
+              "otherFieldValue": {
+                "otherFieldKey": "name"
+              }
+            },
+            {
+              "propertyName": "Alias",
+              "otherFieldValue": {
+                "otherFieldKey": "alias"
+              }
+            },
+            {
+              "propertyName": "Organization",
+              "otherFieldValue": {
+                "otherFieldKey": "organization"
+              }
+            }
+          ]
         }
       },
+      "displayField": "text",
       "required": true
     },
-    "type": "multiselect",
+    "type": "input",
     "summaryVisibility": "Show",
-    "textOrLabel": "text",
     "requiresTemplateOptions": true,
     "requiresKey": true,
     "requiresDataSource": false
