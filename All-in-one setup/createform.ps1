@@ -16,40 +16,42 @@ $script:duplicateFormSuffix = "_tmp" #the suffix will be added to all HelloID re
 #NOTE: You can also update the HelloID Global variable values afterwards in the HelloID Admin Portal: https://<CUSTOMER>.helloid.com/admin/variablelibrary
 $globalHelloIDVariables = [System.Collections.Generic.List[object]]@();
 
-#Global variable #1 >> EntraIdCertificatePassword
-$tmpName = @'
-EntraIdCertificatePassword
-'@ 
-$tmpValue = @'
-
-'@
-$globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
-
-#Global variable #2 >> EntraIdAppId
-$tmpName = @'
-EntraIdAppId
-'@ 
-$tmpValue = @'
-
-'@
-$globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
-
-#Global variable #3 >> EntraIdOrganization
+#Global variable #1 >> EntraIdOrganization
 $tmpName = @'
 EntraIdOrganization
 '@ 
-$tmpValue = @'
-
-'@
+$tmpValue = "" 
 $globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
 
-#Global variable #4 >> EntraIdCertificateBase64String
+#Global variable #2 >> EntraIdCertificateBase64String
 $tmpName = @'
 EntraIdCertificateBase64String
 '@ 
 $tmpValue = @'
+'@ 
+$globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
 
-'@
+#Global variable #3 >> EntraIdCertificatePassword
+$tmpName = @'
+EntraIdCertificatePassword
+'@ 
+$tmpValue = "" 
+$globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
+
+#Global variable #4 >> EntraIdAppId
+$tmpName = @'
+EntraIdAppId
+'@ 
+$tmpValue = "" 
+$globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
+
+#Global variable #5 >> ExchangeOnlineSharedMailboxDomain
+$tmpName = @'
+ExchangeOnlineSharedMailboxDomain
+'@ 
+$tmpValue = @'
+enjoy.nl;testcompany.nl
+'@ 
 $globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
 
 
@@ -350,20 +352,6 @@ foreach ($item in $globalHelloIDVariables) {
 
 
 <# Begin: HelloID Data sources #>
-<# Begin: DataSource "Exchange-online-shared-mailbox-create | generate-table-mail-domains-create" #>
-$tmpStaticValue = @'
-[{"Naam":"RIBW NR","Maildomain":"ribw-nr.nl"}]
-'@ 
-$tmpModel = @'
-[{"key":"Naam","type":0},{"key":"Maildomain","type":0}]
-'@ 
-$dataSourceGuid_0 = [PSCustomObject]@{} 
-$dataSourceGuid_0_Name = @'
-Exchange-online-shared-mailbox-create | generate-table-mail-domains-create
-'@ 
-Invoke-HelloIDDatasource -DatasourceName $dataSourceGuid_0_Name -DatasourceType "2" -DatasourceStaticValue $tmpStaticValue -DatasourceModel $tmpModel -returnObject ([Ref]$dataSourceGuid_0) 
-<# End: DataSource "Exchange-online-shared-mailbox-create | generate-table-mail-domains-create" #>
-
 <# Begin: DataSource "Exchange-online-shared-mailbox-create | function-check-online-mailbox-exists" #>
 $tmpPsScript = @'
 # Enable TLS1.2
@@ -511,11 +499,41 @@ Exchange-online-shared-mailbox-create | function-check-online-mailbox-exists
 '@ 
 Invoke-HelloIDDatasource -DatasourceName $dataSourceGuid_1_Name -DatasourceType "4" -DatasourceInput $tmpInput -DatasourcePsScript $tmpPsScript -DatasourceModel $tmpModel -DataSourceRunInCloud "False" -returnObject ([Ref]$dataSourceGuid_1) 
 <# End: DataSource "Exchange-online-shared-mailbox-create | function-check-online-mailbox-exists" #>
+
+<# Begin: DataSource "Exchange-online-shared-mailbox-create | generate-table-mail-domains-create" #>
+$tmpPsScript = @'
+## Domains are set in global variables
+
+$Domains = $ExchangeOnlineSharedMailboxDomain.split(';')
+
+foreach ($Domain in $Domains) {
+
+    $returnObject = @{
+        name               = $domain
+        domain            = $domain
+    }
+
+    Write-Output $returnObject
+}
+
+'@ 
+$tmpModel = @'
+[{"key":"domain","type":0},{"key":"name","type":0}]
+'@ 
+$tmpInput = @'
+[]
+'@ 
+$dataSourceGuid_0 = [PSCustomObject]@{} 
+$dataSourceGuid_0_Name = @'
+Exchange-online-shared-mailbox-create | generate-table-mail-domains-create
+'@ 
+Invoke-HelloIDDatasource -DatasourceName $dataSourceGuid_0_Name -DatasourceType "4" -DatasourceInput $tmpInput -DatasourcePsScript $tmpPsScript -DatasourceModel $tmpModel -DataSourceRunInCloud "True" -returnObject ([Ref]$dataSourceGuid_0) 
+<# End: DataSource "Exchange-online-shared-mailbox-create | generate-table-mail-domains-create" #>
 <# End: HelloID Data sources #>
 
 <# Begin: Dynamic Form "Exchange online - Shared Mailbox - Create" #>
 $tmpSchema = @"
-[{"templateOptions":{"title":"Retrieving this information from Exchange Online takes an average of +/- 10 seconds.","titleField":"","bannerType":"Info","useBody":true},"type":"textbanner","summaryVisibility":"Show","body":"Please wait so we can validate the input.","requiresTemplateOptions":false,"requiresKey":false,"requiresDataSource":false},{"key":"organization","templateOptions":{"label":"Organization","required":true,"useObjects":false,"useDataSource":true,"useFilter":true,"options":[],"valueField":"Naam","textField":"Naam","dataSourceConfig":{"dataSourceGuid":"$dataSourceGuid_0","input":{"propertyInputs":[]}},"useDefault":true,"defaultSelectorProperty":"Naam"},"type":"dropdown","summaryVisibility":"Show","textOrLabel":"text","requiresTemplateOptions":true,"requiresKey":true,"requiresDataSource":false},{"key":"name","templateOptions":{"label":"name","placeholder":"IT department","required":true,"minLength":2},"type":"input","summaryVisibility":"Show","requiresTemplateOptions":true,"requiresKey":true,"requiresDataSource":false},{"key":"alias","templateOptions":{"label":"Alias","placeholder":"it-department","required":true},"type":"input","summaryVisibility":"Show","requiresTemplateOptions":true,"requiresKey":true,"requiresDataSource":false},{"key":"Validation","templateOptions":{"label":"Validate","readonly":true,"useDataSource":true,"pattern":"^Valid.*","dataSourceConfig":{"dataSourceGuid":"$dataSourceGuid_1","input":{"propertyInputs":[{"propertyName":"Name","otherFieldValue":{"otherFieldKey":"name"}},{"propertyName":"Alias","otherFieldValue":{"otherFieldKey":"alias"}},{"propertyName":"Organization","otherFieldValue":{"otherFieldKey":"organization"}}]}},"displayField":"text","required":true},"type":"input","summaryVisibility":"Show","requiresTemplateOptions":true,"requiresKey":true,"requiresDataSource":false}]
+[{"templateOptions":{"title":"Retrieving this information from Exchange Online takes an average of +/- 10 seconds.","titleField":"","bannerType":"Info","useBody":true},"type":"textbanner","summaryVisibility":"Show","body":"Please wait so we can validate the input.","requiresTemplateOptions":false,"requiresKey":false,"requiresDataSource":false},{"key":"organization","templateOptions":{"label":"Organization","required":true,"useObjects":false,"useDataSource":true,"useFilter":true,"options":[],"valueField":"domain","textField":"name","dataSourceConfig":{"dataSourceGuid":"$dataSourceGuid_0","input":{"propertyInputs":[]}},"useDefault":true,"defaultSelectorProperty":"Naam"},"type":"dropdown","summaryVisibility":"Show","textOrLabel":"text","requiresTemplateOptions":true,"requiresKey":true,"requiresDataSource":false},{"key":"name","templateOptions":{"label":"name","placeholder":"IT department","required":true,"minLength":2},"type":"input","summaryVisibility":"Show","requiresTemplateOptions":true,"requiresKey":true,"requiresDataSource":false},{"key":"alias","templateOptions":{"label":"Alias","placeholder":"it-department","required":true},"type":"input","summaryVisibility":"Show","requiresTemplateOptions":true,"requiresKey":true,"requiresDataSource":false},{"key":"Validation","templateOptions":{"label":"Validate","readonly":true,"useDataSource":true,"pattern":"^Valid.*","dataSourceConfig":{"dataSourceGuid":"$dataSourceGuid_1","input":{"propertyInputs":[{"propertyName":"Name","otherFieldValue":{"otherFieldKey":"name"}},{"propertyName":"Alias","otherFieldValue":{"otherFieldKey":"alias"}},{"propertyName":"Organization","otherFieldValue":{"otherFieldKey":"organization"}}]}},"displayField":"text","required":true},"type":"input","summaryVisibility":"Show","requiresTemplateOptions":true,"requiresKey":true,"requiresDataSource":false}]
 "@ 
 
 $dynamicFormGuid = [PSCustomObject]@{} 

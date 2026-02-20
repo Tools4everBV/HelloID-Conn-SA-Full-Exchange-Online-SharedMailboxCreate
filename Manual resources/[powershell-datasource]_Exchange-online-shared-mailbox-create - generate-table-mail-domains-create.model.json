@@ -1,10 +1,10 @@
 [
   {
-    "key": "Naam",
+    "key": "domain",
     "type": 0
   },
   {
-    "key": "Maildomain",
+    "key": "name",
     "type": 0
   }
 ]

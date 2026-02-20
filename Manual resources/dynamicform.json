@@ -22,8 +22,8 @@
       "useDataSource": true,
       "useFilter": true,
       "options": [],
-      "valueField": "Naam",
-      "textField": "Naam",
+      "valueField": "domain",
+      "textField": "name",
       "dataSourceConfig": {
         "dataSourceGuid": "$dataSourceGuid_0",
         "input": {
