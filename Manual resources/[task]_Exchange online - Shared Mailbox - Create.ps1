@@ -1,7 +1,7 @@
 # variables configured in form
 $mailboxDisplayName = $form.displayName
 $mailboxMailPrefix = $form.mailPrefix
-$mailboxMailDomain = $form.mailDomain.mailDomain
+$mailboxMailDomain = $form.mailDomain.id
 $mailboxPrimarySmtpAddress = "$($mailboxMailPrefix)@$($mailboxMailDomain)"
 $mailboxAlias = $form.alias
 
@@ -25,13 +25,6 @@ $commands = @(
 $VerbosePreference = "SilentlyContinue"
 $InformationPreference = "Continue"
 $WarningPreference = "Continue"
-
-$VerbosePreference = "SilentlyContinue"
-$InformationPreference = "Continue"
-$WarningPreference = "Continue"
-
-# Enable TLS1.2
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
 #region functions
 function Get-MSEntraCertificate {

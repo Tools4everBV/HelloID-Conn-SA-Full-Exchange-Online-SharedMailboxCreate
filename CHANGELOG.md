@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. The format 
 ### Added
 - Certificate-based authentication support for Microsoft Entra ID and Exchange Online
 - Email address and alias validation using Microsoft Graph API for improved validation performance
+- Dynamic domain retrieval via Microsoft Graph API to query verified domains with Email support
 - Display Name field to specify the shared mailbox display name
 - Email address (prefix) field separate from mail domain selection
 - Optional Alias field for shared mailbox with default fallback to email prefix
@@ -19,12 +20,14 @@ All notable changes to this project will be documented in this file. The format 
   - Old variables: `EntraSecret`, `EntraTenantId`, `EntraAppID`, `EntraOrganization`
   - New variables: `EntraIdCertificateBase64String`, `EntraIdCertificatePassword`, `EntraIdOrganization`, `EntraIdAppId`
 - **Performance**: Changed mailbox validation from `Get-Mailbox` cmdlet (30+ seconds) to Microsoft Graph API for email address and alias uniqueness checks
+- **Performance**: Replaced static domain list with dynamic Graph API queries for better performance and accuracy
 - Form structure completely redesigned with improved field layout and real-time validation
 - Naming convention updated to use hyphens (e.g., "Exchange online - Shared Mailbox - Create")
 - Data sources refactored:
-  - `EntraID-Check-EmailAddress-Unique` - New Graph API-based email validation
-  - `EntraID-Check-Alias-Unique` - New Graph API-based alias validation
-  - `Static-Json-MailDomains` - Static mail domain list
+  - `EntraID-Check-EmailAddress-Unique` - New Graph API-based email validation with current mailbox detection
+  - `EntraID-Check-Alias-Unique` - New Graph API-based alias validation with current mailbox detection
+  - `Graph-Get-MailDomains` - Dynamic Graph API-based domain retrieval (filters verified domains with Email support)
+- Domain selection now automatically prioritizes the current mailbox's domain at the top of the list
 - Mailbox configuration logic improved:
   - Display Name and Mailbox Name now set to user-provided value
   - Primary SMTP Address constructed dynamically from email prefix + selected domain

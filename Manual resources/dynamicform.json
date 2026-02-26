@@ -54,8 +54,8 @@
           "useDataSource": true,
           "useFilter": true,
           "options": [],
-          "valueField": "mailDomain",
-          "textField": "mailDomain",
+          "valueField": "id",
+          "textField": "id",
           "dataSourceConfig": {
             "dataSourceGuid": "$dataSourceGuid_0",
             "input": {

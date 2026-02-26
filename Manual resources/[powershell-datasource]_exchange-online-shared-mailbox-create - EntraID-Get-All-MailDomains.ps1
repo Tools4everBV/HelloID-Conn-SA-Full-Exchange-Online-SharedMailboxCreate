@@ -1,13 +1,3 @@
-# variables configured in form
-$mailPrefix = $datasource.mailPrefix
-$mailDomain = $datasource.mailDomain.id
-$PrimarySmtpAddress = "$mailPrefix@$mailDomain"
-
-# Build filter - Graph API uses $filter with OData syntax
-# Check for mailboxes matching the displayName, mailNickname (alias), primary email or proxy addresses
-# This will check ALL users (enabled and disabled), including shared/room/equipment mailboxes
-$filter = "`$filter=mailNickname eq '$mailPrefix' or mail eq '$PrimarySmtpAddress' or proxyAddresses/any(x:x eq 'smtp:$PrimarySmtpAddress') or proxyAddresses/any(x:x eq 'SMTP:$PrimarySmtpAddress')"
-
 # Global variables
 # Outcommented as these are set from Global Variables
 # $EntraIdTenantId = ""
@@ -18,12 +8,9 @@ $filter = "`$filter=mailNickname eq '$mailPrefix' or mail eq '$PrimarySmtpAddres
 # Fixed values
 # Properties to select - Select only needed properties to limit memory usage and speed up processing
 $propertiesToSelect = @(
-    "id",
-    "userPrincipalName",
-    "displayName",
-    "mailNickname",
-    "mail",
-    "proxyAddresses"
+    "id"
+    , "isVerified"
+    , "supportedServices"
 )
 
 # Enable TLS1.2
@@ -210,46 +197,39 @@ try {
     # Create headers
     $actionMessage = "creating headers"
     $headers = @{
-        "Authorization"    = "Bearer $($entraToken)"
-        "Accept"           = "application/json"
-        "Content-Type"     = "application/json"
-        "ConsistencyLevel" = "eventual" # Needed to filter on specific attributes (https://docs.microsoft.com/en-us/graph/aad-advanced-queries)
+        "Authorization" = "Bearer $($entraToken)"
+        "Accept"        = "application/json"
+        "Content-Type"  = "application/json"
     }
 
-    # Get Microsoft Entra ID Users
-    # Docs: https://learn.microsoft.com/en-us/graph/api/user-list?view=graph-rest-1.0&tabs=http
-    $actionMessage = "querying Microsoft Entra ID Users matching filter [$filter]"
+    # Get Microsoft Entra ID Domains
+    # Docs: https://learn.microsoft.com/en-us/graph/api/domain-list?view=graph-rest-1.0&tabs=http
+    $actionMessage = "querying Microsoft Entra ID Domains"
 
-    $getMicrosoftEntraIDUsersSplatParams = @{
-        Uri         = "https://graph.microsoft.com/v1.0/users?$filter&`$select=$($propertiesToSelect -join ',')&`$top=999&`$count=true"
+    $getMicrosoftEntraIDDomainsSplatParams = @{
+        Uri         = "https://graph.microsoft.com/v1.0/domains"#?`$select=$($propertiesToSelect -join ',')&`$top=999&`$count=true"#?$filter"
         Headers     = $headers
         Method      = "GET"
         Verbose     = $false
         ErrorAction = "Stop"
     }
-    
-    $getMicrosoftEntraIDUsersResponse = $null
-    $getMicrosoftEntraIDUsersResponse = Invoke-RestMethod @getMicrosoftEntraIDUsersSplatParams
+    $getMicrosoftEntraIDDomainsResponse = $null
+    $getMicrosoftEntraIDDomainsResponse = Invoke-RestMethod @getMicrosoftEntraIDDomainsSplatParams
 
     # Select only specified properties to limit memory usage
-    $microsoftEntraIDUsers = $null
-    $microsoftEntraIDUsers = $getMicrosoftEntraIDUsersResponse.Value | Select-Object $propertiesToSelect
-    Write-Information "Queried Microsoft Entra ID Users matching filter [$filter]. Result count: $(@($microsoftEntraIDUsers).Count)"
+    $microsoftEntraIDDomains = $null
+    $microsoftEntraIDDomains = $getMicrosoftEntraIDDomainsResponse.Value | Select-Object $propertiesToSelect
+    Write-Information "Queried Microsoft Entra ID Domains. Result count: $(@($microsoftEntraIDDomains).Count)"
 
-    # Check if UPN is unique and free in AD
-    if (($microsoftEntraIDUsers | Measure-Object).Count -gt 0) {
-        Write-Warning "Email address is not unique. In use by: $($microsoftEntraIDUsers.UserprincipalName -Join ';')."
+    # Filter for verified domains only and where Email is supported - not support by Graph API filter query
+    $actionMessage = "filtering for verified domains only and where Email is supported"
+    $microsoftEntraIDDomains = $microsoftEntraIDDomains | Where-Object { $_.isVerified -eq $true -and $_.supportedServices -like '*Email*' }
+    Write-Information "Filter for verified domains only and where Email is supported. Result count: $(@($microsoftEntraIDDomains).Count)"
 
-        # Send results to HelloID
-        $actionMessage = "sending results to HelloID"
-        Write-Output "Invalid: Email address is not unique. In use by: $($microsoftEntraIDUsers.UserprincipalName -Join ';')"
-    }
-    else {
-        Write-Information "Email address is unique and free to use."
-
-        # Send results to HelloID
-        $actionMessage = "sending results to HelloID"
-        Write-Output "Valid: Email address is unique and free to use." 
+    # Send results to HelloID
+    $actionMessage = "sending results to HelloID"
+    $microsoftEntraIDDomains | Sort-Object -Property id | ForEach-Object {
+        Write-Output $_
     }
 }
 catch {
@@ -267,3 +247,4 @@ catch {
     Write-Warning $warningMessage
     Write-Error $auditMessage
 }
+

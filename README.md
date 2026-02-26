@@ -36,6 +36,7 @@ Once you have completed the Microsoft setup and followed their best practices, c
 
 - **API Permissions** (Application permissions):
   - `User.Read.All` - To validate email uniqueness by listing users via Graph API
+  - `Domain.Read.All` - To retrieve verified domains for the mail domain dropdown
   - `Exchange.ManageAsApp` - To create and manage shared mailboxes
 - **Entra ID Role assignment:**
   - Assign the **Exchange Administrator** role to the App Registration
@@ -50,10 +51,10 @@ The following global variables must be configured in HelloID when importing and 
 | Setting | Description | Mandatory |
 | --- | --- | --- |
 | EntraIdOrganization | The Entra organization name (domain) | Yes |
+| EntraIdTenantId | The Entra tenant ID (GUID) | Yes |
 | EntraIdAppId | The unique identifier (ID) of the App Registration in Microsoft Entra ID | Yes |
 | EntraIdCertificateBase64String | The Base64-encoded string representation of the app certificate | Yes |
 | EntraIdCertificatePassword | The password associated with the app certificate | Yes |
-| ExchangeOnlineSharedMailboxDomain | Mail domain(s) for shared mailbox (semicolon-separated for multiple domains) | Yes |
 
 ## Remarks
 
@@ -99,10 +100,11 @@ When the form is submitted, the following process occurs in Exchange Online:
 
 ### API endpoints
 
-The following Microsoft Graph API endpoints are used by the connector for email address and alias validation:
+The following Microsoft Graph API endpoints are used by the connector:
 
 | Endpoint | Description |
 | --- | --- |
+| `/v1.0/domains` | Retrieve all verified domains with Email support for the mail domain dropdown |
 | `/v1.0/users` | Search and retrieve users to validate email address and alias uniqueness |
 
 ### PowerShell Cmdlets
@@ -122,6 +124,7 @@ For more information on the APIs and PowerShell cmdlets used in this connector, 
 
 **Microsoft Graph API:**
 - [Authentication with certificate](https://learn.microsoft.com/graph/auth-v2-service)
+- [List domains](https://learn.microsoft.com/graph/api/domain-list)
 - [List users - Advanced query capabilities](https://learn.microsoft.com/graph/aad-advanced-queries)
 - [User resource reference](https://learn.microsoft.com/graph/api/user-list)
 
