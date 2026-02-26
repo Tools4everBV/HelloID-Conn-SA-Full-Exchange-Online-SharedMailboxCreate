@@ -28,7 +28,6 @@ $tmpName = @'
 EntraIDAppId
 '@ 
 $tmpValue = @'
-0fa6f073-11c8-4550-be15-a86d73c096cd
 '@ 
 $globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
 
@@ -44,7 +43,6 @@ $tmpName = @'
 EntraIdOrganization
 '@ 
 $tmpValue = @'
-Zeemaneu.onmicrosoft.com
 '@ 
 $globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
 
@@ -53,7 +51,6 @@ $tmpName = @'
 EntraIDtenantID
 '@ 
 $tmpValue = @'
-78398c0c-4f33-4126-93d3-0d795990da30
 '@ 
 $globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
 
