@@ -1,65 +1,143 @@
 [
   {
+    "key": "displayName",
     "templateOptions": {
-      "title": "Retrieving this information from Exchange Online takes an average of +/- 10 seconds.",
-      "titleField": "",
-      "bannerType": "Info",
-      "useBody": true
-    },
-    "type": "textbanner",
-    "summaryVisibility": "Show",
-    "body": "Please wait so we can validate the input.",
-    "requiresTemplateOptions": false,
-    "requiresKey": false,
-    "requiresDataSource": false
-  },
-  {
-    "key": "organization",
-    "templateOptions": {
-      "label": "Organization",
-      "required": true,
-      "useObjects": false,
-      "useDataSource": true,
-      "useFilter": true,
-      "options": [],
-      "valueField": "domain",
-      "textField": "name",
-      "dataSourceConfig": {
-        "dataSourceGuid": "$dataSourceGuid_0",
-        "input": {
-          "propertyInputs": []
-        }
-      },
-      "useDefault": true,
-      "defaultSelectorProperty": "Naam"
-    },
-    "type": "dropdown",
-    "summaryVisibility": "Show",
-    "textOrLabel": "text",
-    "requiresTemplateOptions": true,
-    "requiresKey": true,
-    "requiresDataSource": false
-  },
-  {
-    "key": "name",
-    "templateOptions": {
-      "label": "name",
+      "label": "Display name",
       "placeholder": "IT department",
       "required": true,
-      "minLength": 2
+      "pattern": "^[A-Za-z0-9À-ÿ .,_'-]{1,256}$",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "validation": {
+      "messages": {
+        "pattern": ""
+      }
     },
     "type": "input",
     "summaryVisibility": "Show",
     "requiresTemplateOptions": true,
     "requiresKey": true,
+    "requiresDataSource": false
+  },
+  {
+    "key": "formRow",
+    "templateOptions": {},
+    "fieldGroup": [
+      {
+        "key": "mailPrefix",
+        "templateOptions": {
+          "label": "Email address",
+          "placeholder": "it-department",
+          "required": true,
+          "pattern": "^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "validation": {
+          "messages": {
+            "pattern": ""
+          }
+        },
+        "type": "input",
+        "summaryVisibility": "Show",
+        "requiresTemplateOptions": true,
+        "requiresKey": true,
+        "requiresDataSource": false
+      },
+      {
+        "key": "mailDomain",
+        "templateOptions": {
+          "label": "Mail domain",
+          "required": true,
+          "useObjects": false,
+          "useDataSource": true,
+          "useFilter": true,
+          "options": [],
+          "valueField": "mailDomain",
+          "textField": "mailDomain",
+          "dataSourceConfig": {
+            "dataSourceGuid": "$dataSourceGuid_0",
+            "input": {
+              "propertyInputs": []
+            }
+          },
+          "defaultSelectorProperty": "mailDomain"
+        },
+        "type": "dropdown",
+        "summaryVisibility": "Show",
+        "textOrLabel": "text",
+        "requiresTemplateOptions": true,
+        "requiresKey": true,
+        "requiresDataSource": false
+      }
+    ],
+    "type": "formrow",
+    "requiresTemplateOptions": true,
+    "requiresKey": true,
+    "requiresDataSource": false
+  },
+  {
+    "key": "mailValidation",
+    "templateOptions": {
+      "label": "Email address validation",
+      "useDataSource": true,
+      "dataSourceConfig": {
+        "dataSourceGuid": "$dataSourceGuid_1",
+        "input": {
+          "propertyInputs": [
+            {
+              "propertyName": "mailPrefix",
+              "otherFieldValue": {
+                "otherFieldKey": "mailPrefix"
+              }
+            },
+            {
+              "propertyName": "mailDomain",
+              "otherFieldValue": {
+                "otherFieldKey": "mailDomain"
+              }
+            }
+          ]
+        }
+      },
+      "displayField": "output",
+      "required": true,
+      "readonly": true,
+      "pattern": "^Valid.*",
+      "placeholder": "Email address will be validated on uniqnueness in Entra ID"
+    },
+    "hideExpression": "!model[\"mailPrefix\"]",
+    "type": "input",
+    "summaryVisibility": "Show",
+    "requiresTemplateOptions": true,
+    "requiresKey": true,
+    "requiresDataSource": false
+  },
+  {
+    "templateOptions": {
+      "title": "Alias is a pseudonym under the specified email. If alias is not provided, then it will be the same as the specified user name in the email address field.",
+      "titleField": "",
+      "bannerType": "Info"
+    },
+    "type": "textbanner",
+    "summaryVisibility": "Show",
+    "body": "Alias is a pseudonym under the specified email. If alias is not provided, then it will be the same as the specified user name in the email address field.",
+    "requiresTemplateOptions": false,
+    "requiresKey": false,
     "requiresDataSource": false
   },
   {
     "key": "alias",
     "templateOptions": {
       "label": "Alias",
-      "placeholder": "it-department",
-      "required": true
+      "pattern": "^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$",
+      "placeholder": "it-dep"
+    },
+    "validation": {
+      "messages": {
+        "pattern": ""
+      }
     },
     "type": "input",
     "summaryVisibility": "Show",
@@ -68,40 +146,36 @@
     "requiresDataSource": false
   },
   {
-    "key": "Validation",
+    "key": "aliasValidation",
     "templateOptions": {
-      "label": "Validate",
+      "label": "Alias validation",
       "readonly": true,
-      "useDataSource": true,
       "pattern": "^Valid.*",
+      "useDataSource": true,
       "dataSourceConfig": {
-        "dataSourceGuid": "$dataSourceGuid_1",
+        "dataSourceGuid": "$dataSourceGuid_2",
         "input": {
           "propertyInputs": [
             {
-              "propertyName": "Name",
-              "otherFieldValue": {
-                "otherFieldKey": "name"
-              }
-            },
-            {
-              "propertyName": "Alias",
+              "propertyName": "alias",
               "otherFieldValue": {
                 "otherFieldKey": "alias"
               }
             },
             {
-              "propertyName": "Organization",
+              "propertyName": "mailDomain",
               "otherFieldValue": {
-                "otherFieldKey": "organization"
+                "otherFieldKey": "mailDomain"
               }
             }
           ]
         }
       },
-      "displayField": "text",
-      "required": true
+      "displayField": "output",
+      "required": true,
+      "placeholder": "Alias will be validated on uniqnueness in Entra ID"
     },
+    "hideExpression": "!model[\"alias\"]",
     "type": "input",
     "summaryVisibility": "Show",
     "requiresTemplateOptions": true,
