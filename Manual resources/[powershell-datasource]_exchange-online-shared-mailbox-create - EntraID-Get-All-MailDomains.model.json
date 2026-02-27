@@ -1,0 +1,14 @@
+[
+  {
+    "key": "id",
+    "type": 0
+  },
+  {
+    "key": "isVerified",
+    "type": 0
+  },
+  {
+    "key": "supportedServices",
+    "type": 0
+  }
+]

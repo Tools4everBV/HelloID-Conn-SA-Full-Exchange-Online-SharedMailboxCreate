@@ -3,7 +3,7 @@
     "description": null,
     "translateDescription": false,
     "inputFieldType": 1,
-    "key": "Name",
+    "key": "mailPrefix",
     "type": 0,
     "options": 1
   },
@@ -11,15 +11,7 @@
     "description": null,
     "translateDescription": false,
     "inputFieldType": 1,
-    "key": "Alias",
-    "type": 0,
-    "options": 1
-  },
-  {
-    "description": null,
-    "translateDescription": false,
-    "inputFieldType": 1,
-    "key": "Organization",
+    "key": "mailDomain",
     "type": 0,
     "options": 1
   }
