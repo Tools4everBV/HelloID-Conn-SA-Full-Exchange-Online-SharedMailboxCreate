@@ -2,7 +2,35 @@
 
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
-## [3.0.0.0] - 2025-02-26
+## [3.1.0] - 2026-03-09
+
+### Added
+- Display name validation using Microsoft Graph API to ensure uniqueness across all Entra ID objects
+- Permission assignment functionality during mailbox creation with support for:
+  - **Full Access** permission with optional Send As inclusion
+  - **Send As** permission
+  - **Send on Behalf** permission
+- User selection grid populated with all Entra ID users (excluding guest users) for permission assignment
+- New data source `EntraID-Check-DisplayName-Unique` for validating display name uniqueness
+- New data source `EntraID-Get-All-Users` for populating user selection grid
+- PowerShell cmdlets for permission management:
+  - `Add-MailboxPermission` for granting Full Access permissions
+  - `Add-RecipientPermission` for granting Send As permissions
+- Checkbox option to automatically include Send As permission when granting Full Access
+- Individual audit log entries for each permission assignment
+- Form sections to organize mailbox creation and permission assignment workflows
+- Comprehensive permission documentation in README with detailed explanations of each permission type
+
+### Changed
+- Form structure reorganized into two sections: "Create mailbox" and "Mailbox Permissions"
+- Display name field now includes real-time uniqueness validation
+- Alias field label updated to "Alias (mailNickName)" for better clarity
+- Enhanced text banners with improved descriptions for email address and alias fields
+- Updated README with detailed permission assignment documentation
+- Updated README API endpoints documentation to include user selection functionality
+- Expanded PowerShell cmdlets documentation to include permission cmdlets
+
+## [3.0.0] - 2025-02-26
 
 ### Added
 - Certificate-based authentication support for Microsoft Entra ID and Exchange Online
@@ -44,19 +72,19 @@ All notable changes to this project will be documented in this file. The format 
 - Improved validation performance by switching from Exchange Online cmdlets to Graph API
 - Enhanced error messages with better context for troubleshooting
 
-## [2.0.0.0] - 2024-03-06
+## [2.0.0] - 2024-03-06
 
 ### Changed
 - Rework to new logging structure
 - Migrated to Exchange Online PowerShell module V3
 
-## [1.0.1.0] - 2021-11-16
+## [1.0.1] - 2021-11-16
 
 ### Added
 - Added version number
 - Updated all-in-one setup script
 
-## [1.0.0.0] - 2021-04-29
+## [1.0.0] - 2021-04-29
 
 ### Added
 - Initial release of HelloID-Conn-SA-Full-Exchange-Online-SharedMailboxCreate

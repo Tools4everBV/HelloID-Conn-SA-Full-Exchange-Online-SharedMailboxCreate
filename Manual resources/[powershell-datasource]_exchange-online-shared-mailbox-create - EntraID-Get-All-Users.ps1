@@ -1,12 +1,4 @@
-# variables configured in form
-$mailPrefix = $datasource.mailPrefix
-$mailDomain = $datasource.mailDomain.id
-$PrimarySmtpAddress = "$mailPrefix@$mailDomain"
-
-# Build filter - Graph API uses $filter with OData syntax
-# Check for mailboxes matching the displayName, mailNickname (alias), primary email or proxy addresses
-# This will check ALL users (enabled and disabled), including shared/room/equipment mailboxes
-$filter = "`$filter=mailNickname eq '$mailPrefix' or mail eq '$PrimarySmtpAddress' or proxyAddresses/any(x:x eq 'smtp:$PrimarySmtpAddress') or proxyAddresses/any(x:x eq 'SMTP:$PrimarySmtpAddress')"
+$filter = "`$filter=userType eq 'Member'" # Get all users, excluding guest users
 
 # Global variables
 # Outcommented as these are set from Global Variables
@@ -21,9 +13,7 @@ $propertiesToSelect = @(
     "id",
     "userPrincipalName",
     "displayName",
-    "mailNickname",
-    "mail",
-    "proxyAddresses"
+    "mail"
 )
 
 # Enable TLS1.2
@@ -217,39 +207,40 @@ try {
     }
 
     # Get Microsoft Entra ID Users
-    # Docs: https://learn.microsoft.com/en-us/graph/api/user-list?view=graph-rest-1.0&tabs=http
+    # API docs: https://learn.microsoft.com/en-us/graph/api/user-list?view=graph-rest-1.0&tabs=http
     $actionMessage = "querying Microsoft Entra ID Users matching filter [$filter]"
-
-    $getMicrosoftEntraIDUsersSplatParams = @{
-        Uri         = "https://graph.microsoft.com/v1.0/users?$filter&`$select=$($propertiesToSelect -join ',')&`$top=999&`$count=true"
-        Headers     = $headers
-        Method      = "GET"
-        Verbose     = $false
-        ErrorAction = "Stop"
-    }
+    $microsoftEntraIDUsers = [System.Collections.ArrayList]@()
+    do {
+        $getMicrosoftEntraIDUsersSplatParams = @{
+            Uri         = "https://graph.microsoft.com/v1.0/users?$filter&`$select=$($propertiesToSelect -join ',')&`$top=999&`$count=true"
+            Headers     = $headers
+            Method      = "GET"
+            Verbose     = $false
+            ErrorAction = "Stop"
+        }
+        if (-not[string]::IsNullOrEmpty($getMicrosoftEntraIDUsersResponse.'@odata.nextLink')) {
+            $getMicrosoftEntraIDUsersSplatParams["Uri"] = $getMicrosoftEntraIDUsersResponse.'@odata.nextLink'
+        }
+        
+        $getMicrosoftEntraIDUsersResponse = $null
+        $getMicrosoftEntraIDUsersResponse = Invoke-RestMethod @getMicrosoftEntraIDUsersSplatParams
     
-    $getMicrosoftEntraIDUsersResponse = $null
-    $getMicrosoftEntraIDUsersResponse = Invoke-RestMethod @getMicrosoftEntraIDUsersSplatParams
+        # Select only specified properties to limit memory usage
+        $getMicrosoftEntraIDUsersResponse.Value = $getMicrosoftEntraIDUsersResponse.Value | Select-Object $propertiesToSelect
 
-    # Select only specified properties to limit memory usage
-    $microsoftEntraIDUsers = $null
-    $microsoftEntraIDUsers = $getMicrosoftEntraIDUsersResponse.Value | Select-Object $propertiesToSelect
+        if ($getMicrosoftEntraIDUsersResponse.Value -is [array]) {
+            [void]$microsoftEntraIDUsers.AddRange($getMicrosoftEntraIDUsersResponse.Value)
+        }
+        else {
+            [void]$microsoftEntraIDUsers.Add($getMicrosoftEntraIDUsersResponse.Value)
+        }
+    } while (-not[string]::IsNullOrEmpty($getMicrosoftEntraIDUsersResponse.'@odata.nextLink'))
     Write-Information "Queried Microsoft Entra ID Users matching filter [$filter]. Result count: $(@($microsoftEntraIDUsers).Count)"
 
-    # Check if value is unique and free
-    if (($microsoftEntraIDUsers | Measure-Object).Count -gt 0) {
-        Write-Warning "Email address is not unique. In use by object with displayName [$($microsoftEntraIDUsers.displayName)], userPrincipalName [$($microsoftEntraIDUsers.userPrincipalName)] mail [$($microsoftEntraIDUsers.mail)] and alias (mailNickName) [$($microsoftEntraIDUsers.mailNickName)]."
-
-        # Send results to HelloID
-        $actionMessage = "sending results to HelloID"
-        Write-Output "Invalid: Email address is not unique. In use by object with displayName [$($microsoftEntraIDUsers.displayName)], userPrincipalName [$($microsoftEntraIDUsers.userPrincipalName)] mail [$($microsoftEntraIDUsers.mail)] and alias (mailNickName) [$($microsoftEntraIDUsers.mailNickName)]"
-    }
-    else {
-        Write-Information "Email address is unique and free to use."
-
-        # Send results to HelloID
-        $actionMessage = "sending results to HelloID"
-        Write-Output "Valid: Email address is unique and free to use." 
+    # Send results to HelloID
+    $actionMessage = "sending results to HelloID"
+    $microsoftEntraIDUsers | Sort-Object -Property displayName | ForEach-Object {
+        Write-Output $_
     }
 }
 catch {
@@ -267,3 +258,4 @@ catch {
     Write-Warning $warningMessage
     Write-Error $auditMessage
 }
+  

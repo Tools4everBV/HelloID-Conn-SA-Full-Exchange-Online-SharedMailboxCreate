@@ -8,15 +8,18 @@
 
 HelloID-Conn-SA-Full-Exchange-Online-SharedMailboxCreate is a delegated form designed for use with HelloID Service Automation (SA). It can be imported into HelloID and customized according to your requirements.
 
-By using this delegated form, you can create a shared mailbox in Exchange Online. The following options are available:
+By using this delegated form, you can create a shared mailbox in Exchange Online and optionally assign permissions to users. The following options are available:
 
 1. Enter the display name for the shared mailbox
+   > Display name is validated for uniqueness in Microsoft Entra ID
 2. Enter the email address (prefix) and select a mail domain
-   > email address is validated for uniqueness in Microsoft Entra ID
-3. Optionally provide an alias for the shared mailbox
+   > Email address is validated for uniqueness in Microsoft Entra ID
+3. Optionally provide an alias (mailNickname) for the shared mailbox
    > Alias is validated for uniqueness in Microsoft Entra ID
-4. Create and configure the shared mailbox
-   > A shared mailbox is created using the provided display name and email address. The mailbox is then configured to receive copies of messages that are sent on behalf of it or as the mailbox itself.
+4. Optionally assign permissions to users
+   > Select permission type (Full Access, Send As, Send on Behalf) and choose users from a searchable grid
+5. Create and configure the shared mailbox
+   > A shared mailbox is created using the provided display name and email address. The mailbox is then configured to receive copies of messages that are sent on behalf of it or as the mailbox itself. Selected permissions are granted to the specified users.
 
 ## Getting started
 
@@ -58,15 +61,17 @@ The following global variables must be configured in HelloID when importing and 
 
 ## Remarks
 
-### Email Address & Alias Validation via Graph API
+### Display Name, Email Address & Alias Validation via Graph API
 
-- **Performance optimization**: Instead of using the Exchange Online cmdlet `Get-Mailbox` (which can take 30+ seconds per query), the connector uses the Microsoft Graph API to validate email address and alias uniqueness
+- **Performance optimization**: Instead of using the Exchange Online cmdlet `Get-Mailbox` (which can take 30+ seconds per query), the connector uses the Microsoft Graph API to validate display name, email address and alias uniqueness
 - **Validation scope**: Checks for uniqueness across all types of objects in Entra ID (users, shared mailboxes, room mailboxes, equipment mailboxes, etc.)
 - **Graph API filters**: Uses OData `$filter` queries on the following properties:
+  - `displayName` - Display name
   - `mailNickname` - Mail nickname/alias
   - `mail` - Primary SMTP address
   - `proxyAddresses` - Proxy addresses (both smtp and SMTP variants)
-- **Two separate data sources**:
+- **Three separate data sources**:
+  - `EntraID-Check-DisplayName-Unique` - Validates the display name uniqueness
   - `EntraID-Check-EmailAddress-Unique` - Validates the email prefix uniqueness
   - `EntraID-Check-Alias-Unique` - Validates the alias uniqueness (if an alias is provided)
 
@@ -96,6 +101,33 @@ When the form is submitted, the following process occurs in Exchange Online:
        - Enables the mailbox to receive a copy of messages when someone sends as the mailbox
    - These settings ensure the shared mailbox owner receives copies of all messages sent using the mailbox's identity or delegated permissions
 
+#### Permission Assignment (Optional)
+
+If permissions are selected in the form, the following permissions can be granted to users immediately after mailbox creation:
+
+1. **Full Access** (`Add-MailboxPermission` cmdlet)
+   - Grants the user full access to the shared mailbox
+   - Allows the user to open and read all items in the mailbox
+   - AutoMapping setting determines whether the mailbox appears automatically in the user's Outlook
+   - Optionally includes Send As permission (configurable via checkbox)
+
+2. **Send As** (`Add-RecipientPermission` cmdlet)
+   - Grants the user the ability to send messages as the shared mailbox
+   - Messages appear to come directly from the shared mailbox address
+   - Recipients cannot tell that the message was sent by someone else
+
+3. **Send on Behalf** (`Set-Mailbox` cmdlet with `GrantSendOnBehalfTo` parameter)
+   - Grants the user the ability to send messages on behalf of the shared mailbox
+   - Messages show "Sent by [User] on behalf of [Shared Mailbox]"
+   - Recipients can see who actually sent the message
+
+**Permission Assignment Features:**
+- Multiple users can be selected from a searchable grid populated with all Entra ID users (excluding guests)
+- Permissions are assigned during the form submission process, immediately after mailbox creation
+- Each permission type can be assigned independently or in combination
+- Full Access can optionally include Send As permission via a checkbox option
+- All permission assignments generate individual audit log entries for tracking
+
 ## Development resources
 
 ### API endpoints
@@ -105,7 +137,7 @@ The following Microsoft Graph API endpoints are used by the connector:
 | Endpoint | Description |
 | --- | --- |
 | `/v1.0/domains` | Retrieve all verified domains with Email support for the mail domain dropdown |
-| `/v1.0/users` | Search and retrieve users to validate email address and alias uniqueness |
+| `/v1.0/users` | Search and retrieve users to validate display name, email address and alias uniqueness, and to populate the user selection grid for permission assignment |
 
 ### PowerShell Cmdlets
 
@@ -115,7 +147,9 @@ The following PowerShell cmdlets are used by the connector:
 | --- | --- |
 | `Connect-ExchangeOnline` | Establish session to Exchange Online using certificate-based app-only authentication |
 | `New-Mailbox` | Create the shared mailbox with specified properties |
-| `Set-Mailbox` | Configure mailbox delegation settings after creation |
+| `Set-Mailbox` | Configure mailbox delegation settings after creation and grant Send on Behalf permissions |
+| `Add-MailboxPermission` | Grant Full Access permissions to users |
+| `Add-RecipientPermission` | Grant Send As permissions to users |
 | `Disconnect-ExchangeOnline` | Close the Exchange Online session |
 
 ### Documentation
@@ -133,6 +167,8 @@ For more information on the APIs and PowerShell cmdlets used in this connector, 
 - [Connect-ExchangeOnline](https://learn.microsoft.com/powershell/module/exchange/connect-exchangeonline)
 - [New-Mailbox](https://learn.microsoft.com/powershell/module/exchange/new-mailbox)
 - [Set-Mailbox](https://learn.microsoft.com/powershell/module/exchange/set-mailbox)
+- [Add-MailboxPermission](https://learn.microsoft.com/powershell/module/exchange/add-mailboxpermission)
+- [Add-RecipientPermission](https://learn.microsoft.com/powershell/module/exchange/add-recipientpermission)
 - [Disconnect-ExchangeOnline](https://learn.microsoft.com/powershell/module/exchange/disconnect-exchangeonline)
 
 ## Getting help
