@@ -5,6 +5,13 @@ $mailboxMailDomain = $form.mailDomain.id
 $mailboxPrimarySmtpAddress = "$($mailboxMailPrefix)@$($mailboxMailDomain)"
 $mailboxAlias = $form.alias
 
+$permissions = @($form.permission)
+$blnIncludeSendAs = [System.Convert]::ToBoolean($form.blnIncludeSendAs)
+if($blnIncludeSendAs -eq $true) {
+    $permissions += 'sendas'
+}
+$usersToAdd = $form.usersToAdd
+
 # Global variables
 # Outcommented as these are set from Global Variables
 # $EntraIdOrganization = ""
@@ -15,7 +22,12 @@ $mailboxAlias = $form.alias
 # Fixed values
 $commands = @(
     "New-Mailbox",
-    "Set-Mailbox"
+    "Set-Mailbox",
+    "Add-MailboxPermission",
+    "Add-RecipientPermission",
+    "Set-Mailbox",
+    "Remove-MailboxPermission",
+    "Remove-RecipientPermission"
 )
 
 # Enable TLS1.2
@@ -148,6 +160,170 @@ try {
         TargetIdentifier  = $mailboxPrimarySmtpAddress # optional (free format text) 
     }
     Write-Information -Tags "Audit" -MessageData $log
+
+    if(-not [string]::IsNullOrEmpty($permissions) -and @($usersToAdd).Count -ge 1){
+        # Grant users permissions to shared mailbox
+        $actionMessage = "granting permission [$($permissions -Join ';')] to shared mailbox to mailbox [$($mailboxDisplayName) ($($mailboxPrimarySmtpAddress))] for users"
+        foreach ($userToAdd in $usersToAdd) {
+            foreach($permission in $permissions) {
+                switch ($permission) {
+                    "fullaccess" {
+                        # Grant Full Access to shared mailbox
+                        try {
+                            $actionMessage = "granting permission [FullAccess] to mailbox [$($mailboxDisplayName) ($($mailboxPrimarySmtpAddress))] for user [$($userToAdd.userPrincipalName) ($($userToAdd.id))]"
+
+                            $FullAccessPermissionSplatParams = @{
+                                Identity      = $mailboxPrimarySmtpAddress  # of $mailbox.UserPrincipalName
+                                User          = $userToAdd.id
+                                AccessRights  = "FullAccess"
+                                AutoMapping   = [bool]$AutoMapping
+                                ErrorAction   = "Stop"
+                                WarningAction = "SilentlyContinue"
+                            }
+                            $addFullAccessPermission = Add-MailboxPermission @FullAccessPermissionSplatParams
+
+                            # Send auditlog to HelloID
+                            $Log = @{
+                                Action            = "GrantMembership" # optional. ENUM (undefined = default) 
+                                System            = "Exchange" # optional (free format text) 
+                                Message           = "Successfully granted permission [FullAccess] to mailbox [$($mailboxDisplayName) ($($mailboxPrimarySmtpAddress))] for user [$($userToAdd.userPrincipalName) ($($userToAdd.id))]" # required (free format text) 
+                                IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
+                                TargetDisplayName = $mailboxDisplayName # optional (free format text)
+                                TargetIdentifier  = $mailboxPrimarySmtpAddress # optional (free format text)
+                            }
+                            Write-Information -Tags "Audit" -MessageData $log
+                        }
+                        catch {
+                            $ex = $PSItem
+                            if (-not [string]::IsNullOrEmpty($ex.Exception.Data.RemoteException.Message)) {
+                                $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Data.RemoteException.Message)"
+                                $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Data.RemoteException.Message)"
+                            }
+                            else {
+                                $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+                                $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+                            }
+
+                            $Log = @{
+                                Action            = "GrantMembership" # optional. ENUM (undefined = default) 
+                                System            = "ExchangeOnline" # optional (free format text) 
+                                Message           = $auditMessage # required (free format text) 
+                                IsError           = $true # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
+                                TargetDisplayName = $mailboxDisplayName # optional (free format text) 
+                                TargetIdentifier  = $mailboxPrimarySmtpAddress # optional (free format text) 
+                            }
+                            Write-Information -Tags "Audit" -MessageData $log
+                            Write-Warning $warningMessage
+                            Write-Error $auditMessage
+                        }
+                        break
+                    }
+                    
+                    "sendas" {
+                        # Grant Send As to shared mailbox
+                        try {
+                            $actionMessage = "granting permission [Send As] to mailbox [$($mailboxDisplayName) ($($mailboxPrimarySmtpAddress))] for user [$($userToAdd.userPrincipalName) ($($userToAdd.id))]"
+
+                            $sendAsPermissionSplatParams = @{
+                                Identity     = $mailboxPrimarySmtpAddress
+                                Trustee      = $userToAdd.id
+                                AccessRights = "SendAs"
+                                Confirm      = $false
+                                ErrorAction  = "Stop"
+                            } 
+                            $addSendAsPermission = Add-RecipientPermission @sendAsPermissionSplatParams
+
+                            # Send auditlog to HelloID
+                            $Log = @{
+                                Action            = "GrantMembership" # optional. ENUM (undefined = default) 
+                                System            = "Exchange" # optional (free format text) 
+                                Message           = "Successfully granted permission [Send As] to mailbox [$($mailboxDisplayName) ($($mailboxPrimarySmtpAddress))] for user [$($userToAdd.userPrincipalName) ($($userToAdd.id))" # required (free format text) 
+                                IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
+                                TargetDisplayName = $mailboxDisplayName # optional (free format text)
+                                TargetIdentifier  = $mailboxPrimarySmtpAddress # optional (free format text)
+                            }
+                            Write-Information -Tags "Audit" -MessageData $log
+                        }
+                        catch {
+                            $ex = $PSItem
+                            if (-not [string]::IsNullOrEmpty($ex.Exception.Data.RemoteException.Message)) {
+                                $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Data.RemoteException.Message)"
+                                $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Data.RemoteException.Message)"
+                            }
+                            else {
+                                $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+                                $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+                            }
+
+                            $Log = @{
+                                Action            = "GrantMembership" # optional. ENUM (undefined = default) 
+                                System            = "ExchangeOnline" # optional (free format text) 
+                                Message           = $auditMessage # required (free format text) 
+                                IsError           = $true # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
+                                TargetDisplayName = $mailboxDisplayName # optional (free format text) 
+                                TargetIdentifier  = $mailboxPrimarySmtpAddress # optional (free format text) 
+                            }
+                            Write-Information -Tags "Audit" -MessageData $log
+                            Write-Warning $warningMessage
+                            Write-Error $auditMessage
+                        }
+                        break
+                    }
+
+                    "sendonbehalf" {
+                        # Grant Send on Behalf to shared mailbox
+                        try {
+                            $actionMessage = "granting permission [Send on Behalf] to mailbox [$($mailboxDisplayName) ($($mailboxPrimarySmtpAddress))] for user [$($userToAdd.userPrincipalName) ($($userToAdd.id))]"
+
+                            $SendonBehalfPermissionSplatParams = @{
+                                Identity            = $mailboxPrimarySmtpAddress
+                                GrantSendOnBehalfTo = @{ add = "$($userToAdd.id)" }
+                                Confirm             = $false
+                                ErrorAction         = "Stop"
+                            }
+                            Write-Warning ($SendonBehalfPermissionSplatParams | ConvertTo-Json -Depth 10)
+                            $addSendonBehalfPermission = Set-Mailbox @SendonBehalfPermissionSplatParams
+
+                            # Send auditlog to HelloID
+                            $Log = @{
+                                Action            = "GrantMembership" # optional. ENUM (undefined = default) 
+                                System            = "Exchange" # optional (free format text) 
+                                Message           = "Successfully granted permission [Send on Behalf] to mailbox [$($mailboxDisplayName) ($($mailboxPrimarySmtpAddress))] for user [$($userToAdd.userPrincipalName) ($($userToAdd.id))]" # required (free format text) 
+                                IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
+                                TargetDisplayName = $mailboxDisplayName # optional (free format text)
+                                TargetIdentifier  = $mailboxPrimarySmtpAddress # optional (free format text)
+                            }
+                            Write-Information -Tags "Audit" -MessageData $log
+                        }
+                        catch {
+                            $ex = $PSItem
+                            if (-not [string]::IsNullOrEmpty($ex.Exception.Data.RemoteException.Message)) {
+                                $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Data.RemoteException.Message)"
+                                $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Data.RemoteException.Message)"
+                            }
+                            else {
+                                $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+                                $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+                            }
+
+                            $Log = @{
+                                Action            = "GrantMembership" # optional. ENUM (undefined = default) 
+                                System            = "ExchangeOnline" # optional (free format text) 
+                                Message           = $auditMessage # required (free format text) 
+                                IsError           = $true # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
+                                TargetDisplayName = $mailboxDisplayName # optional (free format text)
+                                TargetIdentifier  = $mailboxPrimarySmtpAddress # optional (free format text)
+                            }
+                            Write-Information -Tags "Audit" -MessageData $log
+                            Write-Warning $warningMessage
+                            Write-Error $auditMessage
+                        }
+                        break
+                    }
+                }
+            }
+        }
+    }
 }
 catch {
     $ex = $PSItem
